@@ -43,12 +43,13 @@ class TrackedItemCard extends StatelessWidget {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    // Day counter (large number)
+                    // Day counter (large number) - Accessibility: Prominent visual hierarchy
                     Text(
                       item.daysSinceReset.toString(),
-                      style: Theme.of(context).textTheme.displayMedium?.copyWith(
+                      style: Theme.of(context).textTheme.displayLarge?.copyWith(
                             color: statusColor,
-                            fontWeight: FontWeight.w300,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 64,
                           ),
                     ),
                     // "days" label
@@ -98,9 +99,14 @@ class TrackedItemCard extends StatelessWidget {
                   ],
                 ),
               ),
-              // Reset button
+              // Reset button - Accessibility: 48x48dp touch target
               IconButton(
                 onPressed: () => _resetItem(context),
+                padding: const EdgeInsets.all(12),
+                constraints: const BoxConstraints(
+                  minWidth: 48,
+                  minHeight: 48,
+                ),
                 icon: Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
@@ -149,7 +155,7 @@ class TrackedItemCard extends StatelessWidget {
     return Text(
       statusText,
       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-            color: statusColor,
+            color: statusColor.withValues(alpha: 0.7),  // Reduced saturation for visual hierarchy
             fontWeight: FontWeight.w500,
           ),
     );
