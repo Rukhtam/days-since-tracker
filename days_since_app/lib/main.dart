@@ -19,15 +19,7 @@ void main() async {
     DeviceOrientation.portraitDown,
   ]);
 
-  // Set system UI overlay style for dark theme
-  SystemChrome.setSystemUIOverlayStyle(
-    const SystemUiOverlayStyle(
-      statusBarColor: Colors.transparent,
-      statusBarIconBrightness: Brightness.light,
-      systemNavigationBarColor: Color(0xFF121212),
-      systemNavigationBarIconBrightness: Brightness.light,
-    ),
-  );
+  // Note: System UI overlay style will be set dynamically based on theme
 
   // Initialize Hive for local storage
   await HiveService.initialize();
@@ -73,10 +65,29 @@ class DaysSinceApp extends StatelessWidget {
       ],
       child: Consumer<SettingsProvider>(
         builder: (context, settings, _) {
+          // Update system UI overlay style based on theme
+          final isDark = settings.flutterThemeMode == ThemeMode.dark ||
+              (settings.flutterThemeMode == ThemeMode.system &&
+                  MediaQuery.platformBrightnessOf(context) == Brightness.dark);
+
+          SystemChrome.setSystemUIOverlayStyle(
+            SystemUiOverlayStyle(
+              statusBarColor: Colors.transparent,
+              statusBarIconBrightness:
+                  isDark ? Brightness.light : Brightness.dark,
+              systemNavigationBarColor:
+                  isDark ? const Color(0xFF121212) : const Color(0xFFFAFAFA),
+              systemNavigationBarIconBrightness:
+                  isDark ? Brightness.light : Brightness.dark,
+            ),
+          );
+
           return MaterialApp(
             title: 'Days Since',
             debugShowCheckedModeBanner: false,
-            theme: AppTheme.darkTheme,
+            theme: AppTheme.lightTheme,
+            darkTheme: AppTheme.darkTheme,
+            themeMode: settings.flutterThemeMode,
             home: const AppInitializer(child: HomeScreen()),
           );
         },

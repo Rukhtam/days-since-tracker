@@ -1,0 +1,12 @@
+# Days Since Tracker - Android Signing Configuration
+#
+# IMPORTANT: Copy this file to key.properties and fill in your values
+# Do NOT commit key.properties to version control!
+#
+# To generate a keystore, run:
+# keytool -genkey -v -keystore ~/days-since-upload-key.jks -keyalg RSA -keysize 2048 -validity 10000 -alias upload
+
+storePassword=YOUR_STORE_PASSWORD
+keyPassword=YOUR_KEY_PASSWORD
+keyAlias=upload
+storeFile=/path/to/your/days-since-upload-key.jks

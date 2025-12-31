@@ -1,0 +1,34 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Calendar/Timer icon representing "Days Since" tracker -->
+    <!-- The icon shows a circular progress ring with a number inside, echoing the app's visual language -->
+
+    <!-- Main circular background (slightly smaller to fit safe zone) -->
+    <path
+        android:fillColor="#4CAF50"
+        android:pathData="M54,54m-28,0a28,28 0,1 1,56 0a28,28 0,1 1,-56 0"/>
+
+    <!-- Inner dark circle -->
+    <path
+        android:fillColor="#1E1E1E"
+        android:pathData="M54,54m-22,0a22,22 0,1 1,44 0a22,22 0,1 1,-44 0"/>
+
+    <!-- Stylized "D" for Days - clean, modern design -->
+    <!-- Main vertical stroke of D -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M46,42 L46,66 L50,66 L50,46 L54,46 C58.5,46 62,49.5 62,54 C62,58.5 58.5,62 54,62 L50,62 L50,66 L54,66 C60.6,66 66,60.6 66,54 C66,47.4 60.6,42 54,42 L46,42 Z"/>
+
+    <!-- Accent ring segment at top (like a progress indicator) -->
+    <path
+        android:fillColor="#FFC107"
+        android:pathData="M54,26 A28,28 0 0,1 78.2,42"
+        android:strokeWidth="4"
+        android:strokeColor="#FFC107"
+        android:strokeLineCap="round"/>
+
+</vector>

@@ -1,5 +1,12 @@
-import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+
+/// Enum representing the available theme modes.
+enum AppThemeMode {
+  light,
+  dark,
+  system,
+}
 
 /// Provider that manages app-wide settings.
 /// Settings are persisted using Hive for data persistence across app restarts.
@@ -15,6 +22,7 @@ class SettingsProvider extends ChangeNotifier {
   static const String _keyConfirmReset = 'confirm_reset';
   static const String _keyFirstLaunch = 'first_launch';
   static const String _keyOnboardingComplete = 'onboarding_complete';
+  static const String _keyThemeMode = 'theme_mode';
 
   Box? _box;
   bool _isInitialized = false;
@@ -106,6 +114,63 @@ class SettingsProvider extends ChangeNotifier {
     }
   }
 
+  // ========== Theme Settings ==========
+
+  /// Get the current theme mode setting
+  AppThemeMode get themeMode {
+    final value = _box?.get(_keyThemeMode, defaultValue: 'dark') ?? 'dark';
+    switch (value) {
+      case 'light':
+        return AppThemeMode.light;
+      case 'system':
+        return AppThemeMode.system;
+      case 'dark':
+      default:
+        return AppThemeMode.dark;
+    }
+  }
+
+  set themeMode(AppThemeMode value) {
+    String stringValue;
+    switch (value) {
+      case AppThemeMode.light:
+        stringValue = 'light';
+        break;
+      case AppThemeMode.system:
+        stringValue = 'system';
+        break;
+      case AppThemeMode.dark:
+        stringValue = 'dark';
+        break;
+    }
+    _box?.put(_keyThemeMode, stringValue);
+    notifyListeners();
+  }
+
+  /// Convert AppThemeMode to Flutter ThemeMode
+  ThemeMode get flutterThemeMode {
+    switch (themeMode) {
+      case AppThemeMode.light:
+        return ThemeMode.light;
+      case AppThemeMode.dark:
+        return ThemeMode.dark;
+      case AppThemeMode.system:
+        return ThemeMode.system;
+    }
+  }
+
+  /// Get display name for theme mode
+  String get themeModeDisplayName {
+    switch (themeMode) {
+      case AppThemeMode.light:
+        return 'Light';
+      case AppThemeMode.dark:
+        return 'Dark';
+      case AppThemeMode.system:
+        return 'System';
+    }
+  }
+
   // ========== UI Preference Settings ==========
 
   /// Whether to show completed/good items first (inverts status sort)
@@ -180,6 +245,7 @@ class SettingsProvider extends ChangeNotifier {
       'confirmBeforeReset': confirmBeforeReset,
       'isFirstLaunch': isFirstLaunch,
       'onboardingComplete': onboardingComplete,
+      'themeMode': themeModeDisplayName,
     };
   }
 

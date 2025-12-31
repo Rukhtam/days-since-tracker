@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
-import '../constants/app_colors.dart';
 import '../providers/settings_provider.dart';
 import '../providers/tracked_items_provider.dart';
 import '../services/notification_service.dart';
@@ -46,28 +45,33 @@ class _SettingsScreenState extends State<SettingsScreen> {
           return ListView(
             padding: const EdgeInsets.symmetric(vertical: 8),
             children: [
+              // Appearance Section
+              _buildSectionHeader(context, 'Appearance'),
+              _buildAppearanceSettings(context, settings),
+              const SizedBox(height: 16),
+
               // Notifications Section
-              _buildSectionHeader('Notifications'),
+              _buildSectionHeader(context, 'Notifications'),
               _buildNotificationSettings(context, settings),
               const SizedBox(height: 16),
 
               // Display Section
-              _buildSectionHeader('Display'),
+              _buildSectionHeader(context, 'Display'),
               _buildDisplaySettings(context, settings),
               const SizedBox(height: 16),
 
               // Behavior Section
-              _buildSectionHeader('Behavior'),
+              _buildSectionHeader(context, 'Behavior'),
               _buildBehaviorSettings(context, settings),
               const SizedBox(height: 16),
 
               // Data Section
-              _buildSectionHeader('Data'),
+              _buildSectionHeader(context, 'Data'),
               _buildDataSettings(context, settings),
               const SizedBox(height: 16),
 
               // About Section
-              _buildSectionHeader('About'),
+              _buildSectionHeader(context, 'About'),
               _buildAboutSettings(context),
               const SizedBox(height: 32),
             ],
@@ -78,13 +82,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   /// Build section header with title
-  Widget _buildSectionHeader(String title) {
+  Widget _buildSectionHeader(BuildContext context, String title) {
+    final theme = Theme.of(context);
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
       child: Text(
         title,
         style: TextStyle(
-          color: AppColors.primary,
+          color: theme.colorScheme.primary,
           fontWeight: FontWeight.w600,
           fontSize: 14,
           letterSpacing: 0.5,
@@ -93,11 +98,51 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  /// Build appearance-related settings (theme mode)
+  Widget _buildAppearanceSettings(
+    BuildContext context,
+    SettingsProvider settings,
+  ) {
+    final theme = Theme.of(context);
+    return Column(
+      children: [
+        // Theme mode selector
+        ListTile(
+          leading: Icon(
+            _getThemeModeIcon(settings.themeMode),
+            color: theme.colorScheme.primary,
+          ),
+          title: const Text('Theme'),
+          subtitle: Text(settings.themeModeDisplayName),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () => _showThemeModePicker(context, settings),
+        ),
+      ],
+    );
+  }
+
+  /// Get icon for current theme mode
+  IconData _getThemeModeIcon(AppThemeMode mode) {
+    switch (mode) {
+      case AppThemeMode.light:
+        return Icons.light_mode;
+      case AppThemeMode.dark:
+        return Icons.dark_mode;
+      case AppThemeMode.system:
+        return Icons.brightness_auto;
+    }
+  }
+
   /// Build notification-related settings
   Widget _buildNotificationSettings(
     BuildContext context,
     SettingsProvider settings,
   ) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    // Use orange/amber for warning color that works in both themes
+    const warningColor = Color(0xFFFF9800);
+
     return Column(
       children: [
         // Master notification toggle
@@ -109,8 +154,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 : 'Permission required',
             style: TextStyle(
               color: _notificationsPermissionGranted
-                  ? AppColors.textSecondary
-                  : AppColors.statusWarning,
+                  ? theme.textTheme.bodyMedium?.color
+                  : warningColor,
             ),
           ),
           value: settings.notificationsEnabled && _notificationsPermissionGranted,
@@ -142,8 +187,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ? Icons.notifications_active
                 : Icons.notifications_off,
             color: settings.notificationsEnabled && _notificationsPermissionGranted
-                ? AppColors.primary
-                : AppColors.textTertiary,
+                ? colorScheme.primary
+                : theme.iconTheme.color?.withValues(alpha: 0.5),
           ),
         ),
 
@@ -153,8 +198,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
           leading: Icon(
             Icons.access_time,
             color: settings.notificationsEnabled && _notificationsPermissionGranted
-                ? AppColors.primary
-                : AppColors.textTertiary,
+                ? colorScheme.primary
+                : theme.iconTheme.color?.withValues(alpha: 0.5),
           ),
           title: const Text('Notification Time'),
           subtitle: Text(settings.notificationTimeFormatted),
@@ -170,11 +215,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
     BuildContext context,
     SettingsProvider settings,
   ) {
+    final theme = Theme.of(context);
     return Column(
       children: [
         // Sort order
         ListTile(
-          leading: const Icon(Icons.sort, color: AppColors.primary),
+          leading: Icon(Icons.sort, color: theme.colorScheme.primary),
           title: const Text('Sort Order'),
           subtitle: Text(settings.sortOrderDisplayName),
           trailing: const Icon(Icons.chevron_right),
@@ -189,6 +235,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     BuildContext context,
     SettingsProvider settings,
   ) {
+    final theme = Theme.of(context);
     return Column(
       children: [
         // Haptic feedback toggle
@@ -205,8 +252,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
           secondary: Icon(
             Icons.vibration,
             color: settings.hapticFeedbackEnabled
-                ? AppColors.primary
-                : AppColors.textTertiary,
+                ? theme.colorScheme.primary
+                : theme.iconTheme.color?.withValues(alpha: 0.5),
           ),
         ),
 
@@ -222,8 +269,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
           secondary: Icon(
             Icons.warning_outlined,
             color: settings.confirmBeforeReset
-                ? AppColors.primary
-                : AppColors.textTertiary,
+                ? theme.colorScheme.primary
+                : theme.iconTheme.color?.withValues(alpha: 0.5),
           ),
         ),
       ],
@@ -235,27 +282,31 @@ class _SettingsScreenState extends State<SettingsScreen> {
     BuildContext context,
     SettingsProvider settings,
   ) {
+    final theme = Theme.of(context);
     final itemsProvider = context.read<TrackedItemsProvider>();
+    // Use consistent colors for error and warning across themes
+    const errorColor = Color(0xFFF44336);
+    const warningColor = Color(0xFFFF9800);
 
     return Column(
       children: [
         // Clear all data
         ListTile(
-          leading: Icon(Icons.delete_forever, color: AppColors.error),
-          title: Text(
+          leading: const Icon(Icons.delete_forever, color: errorColor),
+          title: const Text(
             'Delete All Items',
-            style: TextStyle(color: AppColors.error),
+            style: TextStyle(color: errorColor),
           ),
           subtitle: Text(
             '${itemsProvider.itemCount} items',
-            style: TextStyle(color: AppColors.textSecondary),
+            style: TextStyle(color: theme.textTheme.bodyMedium?.color),
           ),
           onTap: () => _showDeleteAllConfirmation(context, itemsProvider),
         ),
 
         // Reset settings
         ListTile(
-          leading: Icon(Icons.restore, color: AppColors.statusWarning),
+          leading: const Icon(Icons.restore, color: warningColor),
           title: const Text('Reset Settings'),
           subtitle: const Text('Restore default settings'),
           onTap: () => _showResetSettingsConfirmation(context, settings),
@@ -266,10 +317,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   /// Build about section
   Widget _buildAboutSettings(BuildContext context) {
+    final theme = Theme.of(context);
     return Column(
       children: [
         ListTile(
-          leading: const Icon(Icons.info_outline, color: AppColors.primary),
+          leading: Icon(Icons.info_outline, color: theme.colorScheme.primary),
           title: const Text('About Days Since'),
           subtitle: const Text('Version 1.0.0'),
           onTap: () => _showAboutDialog(context),
@@ -278,19 +330,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  /// Show notification time picker
-  void _showNotificationTimePicker(
+  /// Show theme mode picker
+  void _showThemeModePicker(
     BuildContext context,
     SettingsProvider settings,
   ) {
-    final hours = List.generate(24, (i) => i);
+    final theme = Theme.of(context);
+    final options = [
+      (AppThemeMode.light, 'Light', Icons.light_mode),
+      (AppThemeMode.dark, 'Dark', Icons.dark_mode),
+      (AppThemeMode.system, 'System', Icons.brightness_auto),
+    ];
 
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppColors.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
       builder: (context) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -301,21 +354,87 @@ class _SettingsScreenState extends State<SettingsScreen> {
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: AppColors.divider,
+                color: theme.dividerColor,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Theme',
+              style: theme.textTheme.titleLarge,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Choose your preferred appearance',
+              style: theme.textTheme.bodyMedium,
+            ),
+            const SizedBox(height: 16),
+            ...options.map((option) {
+              final isSelected = option.$1 == settings.themeMode;
+              return ListTile(
+                leading: Icon(
+                  option.$3,
+                  color: isSelected
+                      ? theme.colorScheme.primary
+                      : theme.iconTheme.color,
+                ),
+                title: Text(
+                  option.$2,
+                  style: TextStyle(
+                    color: isSelected ? theme.colorScheme.primary : null,
+                    fontWeight: isSelected ? FontWeight.bold : null,
+                  ),
+                ),
+                trailing: isSelected
+                    ? Icon(Icons.check, color: theme.colorScheme.primary)
+                    : null,
+                onTap: () {
+                  settings.themeMode = option.$1;
+                  _hapticFeedback(settings);
+                  Navigator.pop(context);
+                },
+              );
+            }),
+            const SizedBox(height: 16),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Show notification time picker
+  void _showNotificationTimePicker(
+    BuildContext context,
+    SettingsProvider settings,
+  ) {
+    final theme = Theme.of(context);
+    final hours = List.generate(24, (i) => i);
+
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Handle bar
+            Container(
+              margin: const EdgeInsets.only(top: 12),
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: theme.dividerColor,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
             const SizedBox(height: 16),
             Text(
               'Notification Time',
-              style: Theme.of(context).textTheme.titleLarge,
+              style: theme.textTheme.titleLarge,
             ),
             const SizedBox(height: 8),
             Text(
               'When should we remind you?',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppColors.textSecondary,
-                  ),
+              style: theme.textTheme.bodyMedium,
             ),
             const SizedBox(height: 16),
             SizedBox(
@@ -340,12 +459,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     title: Text(
                       timeString,
                       style: TextStyle(
-                        color: isSelected ? AppColors.primary : null,
+                        color: isSelected ? theme.colorScheme.primary : null,
                         fontWeight: isSelected ? FontWeight.bold : null,
                       ),
                     ),
                     trailing: isSelected
-                        ? const Icon(Icons.check, color: AppColors.primary)
+                        ? Icon(Icons.check, color: theme.colorScheme.primary)
                         : null,
                     onTap: () {
                       settings.notificationTimeHour = hour;
@@ -369,6 +488,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     BuildContext context,
     SettingsProvider settings,
   ) {
+    final theme = Theme.of(context);
     final options = [
       ('status', 'Status (Overdue first)', Icons.priority_high),
       ('days', 'Days since reset', Icons.calendar_today),
@@ -378,10 +498,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppColors.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
       builder: (context) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -392,14 +508,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: AppColors.divider,
+                color: theme.dividerColor,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
             const SizedBox(height: 16),
             Text(
               'Sort Order',
-              style: Theme.of(context).textTheme.titleLarge,
+              style: theme.textTheme.titleLarge,
             ),
             const SizedBox(height: 16),
             ...options.map((option) {
@@ -407,17 +523,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
               return ListTile(
                 leading: Icon(
                   option.$3,
-                  color: isSelected ? AppColors.primary : AppColors.textSecondary,
+                  color: isSelected
+                      ? theme.colorScheme.primary
+                      : theme.iconTheme.color,
                 ),
                 title: Text(
                   option.$2,
                   style: TextStyle(
-                    color: isSelected ? AppColors.primary : null,
+                    color: isSelected ? theme.colorScheme.primary : null,
                     fontWeight: isSelected ? FontWeight.bold : null,
                   ),
                 ),
                 trailing: isSelected
-                    ? const Icon(Icons.check, color: AppColors.primary)
+                    ? Icon(Icons.check, color: theme.colorScheme.primary)
                     : null,
                 onTap: () {
                   settings.sortOrder = option.$1;
@@ -493,7 +611,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 );
               }
             },
-            style: TextButton.styleFrom(foregroundColor: AppColors.error),
+            style: TextButton.styleFrom(
+                foregroundColor: const Color(0xFFF44336)),
             child: const Text('Delete All'),
           ),
         ],
@@ -529,7 +648,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 );
               }
             },
-            style: TextButton.styleFrom(foregroundColor: AppColors.statusWarning),
+            style: TextButton.styleFrom(
+                foregroundColor: const Color(0xFFFF9800)),
             child: const Text('Reset'),
           ),
         ],
@@ -539,6 +659,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   /// Show about dialog
   void _showAboutDialog(BuildContext context) {
+    final theme = Theme.of(context);
     showAboutDialog(
       context: context,
       applicationName: 'Days Since',
@@ -547,7 +668,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         width: 48,
         height: 48,
         decoration: BoxDecoration(
-          color: AppColors.primary,
+          color: theme.colorScheme.primary,
           borderRadius: BorderRadius.circular(12),
         ),
         child: const Icon(
