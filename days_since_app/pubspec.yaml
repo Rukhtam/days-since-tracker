@@ -29,12 +29,19 @@ dependencies:
 
   # Timezone support for scheduled notifications
   timezone: ^0.10.0
+  flutter_timezone: ^3.0.1
 
   # Permission handling
   permission_handler: ^11.3.1
 
   # Haptic feedback
   vibration: ^2.0.0
+
+  # Modern UI fonts
+  google_fonts: ^6.1.0
+
+  # Circular progress indicator
+  percent_indicator: ^4.2.3
 
 dev_dependencies:
   flutter_test:
@@ -46,5 +53,63 @@ dev_dependencies:
   hive_generator: ^2.0.1
   build_runner: ^2.4.13
 
+  # App icon generation
+  flutter_launcher_icons: ^0.13.1
+
+  # Native splash screen generation
+  flutter_native_splash: ^2.3.10
+
 flutter:
   uses-material-design: true
+
+  # Asset directories for icon and splash
+  assets:
+    - assets/icon/
+    - assets/splash/
+
+# App Icon Configuration
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: true
+  image_path: "assets/icon/app_icon.png"
+  min_sdk_android: 21
+
+  # Android adaptive icon (Android 8.0+)
+  adaptive_icon_foreground: "assets/icon/foreground.png"
+  adaptive_icon_background: "#1A1A1A"
+
+  # Android monochrome icon (Material You theming)
+  adaptive_icon_monochrome: "assets/icon/monochrome.png"
+
+  # iOS specific - remove alpha channel for App Store compliance
+  remove_alpha_ios: true
+
+  # Web favicon (optional)
+  web:
+    generate: true
+    image_path: "assets/icon/app_icon.png"
+    background_color: "#1A1A1A"
+    theme_color: "#4CAF50"
+
+# Splash Screen Configuration
+flutter_native_splash:
+  # Background color matching app dark theme
+  color: "#121212"
+
+  # Splash icon (centered)
+  image: "assets/splash/splash_icon.png"
+
+  # Android 12+ specific splash screen
+  android_12:
+    image: "assets/splash/splash_icon.png"
+    icon_background_color: "#1A1A1A"
+    image_dark: "assets/splash/splash_icon.png"
+    icon_background_color_dark: "#0A0A0A"
+
+  # iOS specific
+  ios_content_mode: "center"
+
+  # Platform support
+  android: true
+  ios: true
+  web: false

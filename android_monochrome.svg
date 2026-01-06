@@ -1,0 +1,28 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <!-- Android Monochrome Icon for Material You Themed Icons -->
+  <!-- Single color - system will apply dynamic theming -->
+
+  <!-- Progress Ring Active (270° arc) -->
+  <circle
+    cx="256"
+    cy="256"
+    r="162"
+    fill="none"
+    stroke="#FFFFFF"
+    stroke-width="36"
+    stroke-linecap="round"
+    stroke-dasharray="763.5 254.5"
+    transform="rotate(-90 256 256)"
+  />
+
+  <!-- Number "7" -->
+  <text
+    x="256"
+    y="315"
+    font-family="Roboto, system-ui, sans-serif"
+    font-size="210"
+    font-weight="700"
+    fill="#FFFFFF"
+    text-anchor="middle"
+  >7</text>
+</svg>

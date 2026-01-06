@@ -3,311 +3,311 @@
 Use this checklist to verify all app functionality before release.
 
 ## Test Environment Setup
-- [ ] Install release APK on test device
-- [ ] Clear app data before testing
-- [ ] Test on Android 7.0+ (API 24+)
-- [ ] Test on at least 2 different screen sizes
+- [x] Install release APK on test device
+- [x] Clear app data before testing
+- [x] Test on Android 7.0+ (API 24+)
+- [x] Test on at least 2 different screen sizes
 
 ---
 
 ## 1. First Launch Experience
 
 ### Initial State
-- [ ] App opens without crash
-- [ ] Empty state message is displayed
-- [ ] "Add your first tracker" button is visible
-- [ ] FAB (floating action button) is visible
-- [ ] Settings icon is visible in app bar
+- [x] App opens without crash
+- [x] Empty state message is displayed
+- [x] "Add your first tracker" button is visible
+- [x] FAB (floating action button) is visible
+- [x] Settings icon is visible in app bar
 
 ### Notification Permission
-- [ ] Permission dialog appears on first launch
-- [ ] Granting permission works correctly
-- [ ] Denying permission doesn't crash the app
-- [ ] App functions correctly without notification permission
+- [x] Permission dialog appears on first launch
+- [x] Granting permission works correctly
+- [x] Denying permission doesn't crash the app
+- [x] App functions correctly without notification permission
 
 ---
 
 ## 2. Create (Add) Operations
 
 ### Add via FAB
-- [ ] Tap FAB opens add dialog
-- [ ] Dialog slides up smoothly
-- [ ] Name field is focused
-- [ ] Keyboard appears automatically
+- [x] Tap FAB opens add dialog
+- [x] Dialog slides up smoothly
+- [x] Name field is focused
+- [x] Keyboard appears automatically
 
 ### Add Dialog Fields
-- [ ] Name field accepts text input
-- [ ] Name field has character limit (if any)
-- [ ] Interval field defaults to reasonable value
-- [ ] Interval field only accepts positive numbers
-- [ ] Icon picker displays available icons
-- [ ] Selecting icon updates preview
-- [ ] Color picker displays available colors
-- [ ] Selecting color updates preview
-- [ ] Notifications toggle works
-- [ ] "Reset date" picker works (optional field)
+- [x] Name field accepts text input
+- [x] Name field has character limit (if any)
+- [x] Interval field defaults to reasonable value
+- [x] Interval field only accepts positive numbers
+- [x] Icon picker displays available icons
+- [x] Selecting icon updates preview
+- [x] Color picker displays available colors
+- [x] Selecting color updates preview
+- [x] Notifications toggle works
+- [x] "Reset date" picker works (optional field)
 
 ### Template Quick-Add
-- [ ] Template button is visible
-- [ ] Tap opens template selection
-- [ ] Each template has icon, name, interval
-- [ ] Selecting template fills form fields
-- [ ] Can modify template values before saving
+- [x] Template button is visible
+- [x] Tap opens template selection
+- [x] Each template has icon, name, interval
+- [x] Selecting template fills form fields
+- [x] Can modify template values before saving
 
 ### Saving New Item
-- [ ] Save button creates item
-- [ ] Item appears in list immediately
-- [ ] Haptic feedback on save (if enabled)
-- [ ] Dialog closes after save
-- [ ] Item has correct initial values
+- [x] Save button creates item
+- [x] Item appears in list immediately
+- [x] Haptic feedback on save (if enabled)
+- [x] Dialog closes after save
+- [x] Item has correct initial values
 
 ### Validation
-- [ ] Empty name shows error
-- [ ] Zero/negative interval shows error
-- [ ] Cancel button closes dialog without saving
-- [ ] Swiping down closes dialog without saving
+- [x] Empty name shows error
+- [x] Zero/negative interval shows error
+- [x] Cancel button closes dialog without saving
+- [x] Swiping down closes dialog without saving
 
 ---
 
 ## 3. Read (Display) Operations
 
 ### Home Screen List
-- [ ] Items display correctly in cards
-- [ ] Each card shows progress ring
-- [ ] Each card shows day count
-- [ ] Each card shows item name
-- [ ] Each card shows item icon with correct color
-- [ ] Each card shows status text
-- [ ] Each card shows interval info
-- [ ] Each card shows reset button
+- [x] Items display correctly in cards
+- [x] Each card shows progress ring
+- [x] Each card shows day count
+- [x] Each card shows item name
+- [x] Each card shows item icon with correct color
+- [x] Each card shows status text
+- [x] Each card shows interval info
+- [x] Each card shows reset button
 
 ### Progress Ring
-- [ ] Ring shows correct percentage
-- [ ] Ring color matches status (green/yellow/red)
-- [ ] Ring animates on load (if applicable)
-- [ ] Day number is readable inside ring
+- [x] Ring shows correct percentage
+- [x] Ring color matches status (green/yellow/red)
+- [x] Ring animates on load (if applicable)
+- [x] Day number is readable inside ring
 
 ### Status Colors
-- [ ] < 70%: Green (#4CAF50)
-- [ ] 70-100%: Yellow (#FFC107)
-- [ ] > 100%: Red (#F44336)
+- [x] < 70%: Green (#4CAF50)
+- [x] 70-100%: Yellow (#FFC107)
+- [x] > 100%: Red (#F44336)
 
 ### Status Text
-- [ ] Green: "X days remaining"
-- [ ] Yellow: "Due in X days" or "Due today"
-- [ ] Red: "X days overdue"
+- [x] Green: "X days remaining"
+- [x] Yellow: "Due in X days" or "Due today"
+- [x] Red: "X days overdue"
 
 ### App Bar Stats
-- [ ] Status badges show in app bar
-- [ ] Red count shows overdue items
-- [ ] Yellow count shows warning items
-- [ ] Green count shows good items
-- [ ] Badges update when items change
+- [x] Status badges show in app bar
+- [x] Red count shows overdue items
+- [x] Yellow count shows warning items
+- [x] Green count shows good items
+- [x] Badges update when items change
 
 ### Sorting
-- [ ] Default sort by status works
-- [ ] Sort by days works
-- [ ] Sort by name works
-- [ ] Sort by recent works
-- [ ] Sort preference persists
+- [x] Default sort by status works
+- [x] Sort by days works
+- [x] Sort by name works
+- [x] Sort by recent works
+- [x] Sort preference persists
 
 ### Refresh
-- [ ] Pull-to-refresh updates data
-- [ ] Day counts update after midnight
+- [x] Pull-to-refresh updates data
+- [x] Day counts update after midnight
 
 ---
 
 ## 4. Update (Edit) Operations
 
 ### Opening Edit Dialog
-- [ ] Tap on card opens edit dialog
-- [ ] Dialog pre-fills with current values
-- [ ] All fields are editable
+- [x] Tap on card opens edit dialog
+- [x] Dialog pre-fills with current values
+- [x] All fields are editable
 
 ### Editing Fields
-- [ ] Can change name
-- [ ] Can change interval
-- [ ] Can change icon
-- [ ] Can change color
-- [ ] Can toggle notifications
-- [ ] Can change reset date
+- [x] Can change name
+- [x] Can change interval
+- [x] Can change icon
+- [x] Can change color
+- [x] Can toggle notifications
+- [x] Can change reset date
 
 ### Saving Edits
-- [ ] Save updates item in list
-- [ ] Changes reflect immediately
-- [ ] Notification schedule updates
+- [x] Save updates item in list
+- [x] Changes reflect immediately
+- [x] Notification schedule updates
 
 ### Cancel Editing
-- [ ] Cancel button discards changes
-- [ ] Swiping down discards changes
-- [ ] Original values remain unchanged
+- [x] Cancel button discards changes
+- [x] Swiping down discards changes
+- [x] Original values remain unchanged
 
 ---
 
 ## 5. Delete Operations
 
 ### Long-Press Menu
-- [ ] Long-press shows options menu
-- [ ] Menu has handle bar at top
-- [ ] Shows item icon and name
-- [ ] Shows "Reset to today" option
-- [ ] Shows "Edit item" option
-- [ ] Shows "Delete item" option (red)
-- [ ] Haptic feedback on long-press
+- [x] Long-press shows options menu
+- [x] Menu has handle bar at top
+- [x] Shows item icon and name
+- [x] Shows "Reset to today" option
+- [x] Shows "Edit item" option
+- [x] Shows "Delete item" option (red)
+- [x] Haptic feedback on long-press
 
 ### Delete Confirmation
-- [ ] Delete option shows confirmation dialog
-- [ ] Dialog shows item name
-- [ ] Cancel button works
-- [ ] Confirm delete removes item
-- [ ] Snackbar confirms deletion
-- [ ] Item removed from list immediately
-- [ ] Notifications cancelled for deleted item
+- [x] Delete option shows confirmation dialog
+- [x] Dialog shows item name
+- [x] Cancel button works
+- [x] Confirm delete removes item
+- [x] Snackbar confirms deletion
+- [x] Item removed from list immediately
+- [x] Notifications cancelled for deleted item
 
 ---
 
 ## 6. Reset Operations
 
 ### Reset Button (on card)
-- [ ] Tap reset icon resets item
-- [ ] Haptic feedback on reset
-- [ ] Day count goes to 0
-- [ ] Progress ring resets to empty
-- [ ] Status changes to green
-- [ ] Snackbar shows confirmation
+- [x] Tap reset icon resets item
+- [x] Haptic feedback on reset
+- [x] Day count goes to 0
+- [x] Progress ring resets to empty
+- [x] Status changes to green
+- [x] Snackbar shows confirmation
 
 ### Undo Reset
-- [ ] Snackbar has "Undo" button
-- [ ] Undo restores previous date
-- [ ] All values restore correctly
+- [x] Snackbar has "Undo" button
+- [x] Undo restores previous date
+- [x] All values restore correctly
 
 ### Reset from Menu
-- [ ] Long-press menu reset works
-- [ ] Same behavior as reset button
+- [x] Long-press menu reset works
+- [x] Same behavior as reset button
 
 ---
 
 ## 7. Data Persistence
 
 ### App Restart
-- [ ] Close app completely
-- [ ] Reopen app
-- [ ] All items are present
-- [ ] All values are correct
-- [ ] Sort order is preserved
+- [x] Close app completely
+- [x] Reopen app
+- [x] All items are present
+- [x] All values are correct
+- [x] Sort order is preserved
 
 ### Device Restart
-- [ ] Restart device
-- [ ] Open app
-- [ ] All data intact
+- [x] Restart device
+- [x] Open app
+- [x] All data intact
 
 ### Settings Persistence
-- [ ] Notifications enabled/disabled persists
-- [ ] Sort order persists
-- [ ] Haptic feedback setting persists
-- [ ] First launch flag persists
+- [x] Notifications enabled/disabled persists
+- [x] Sort order persists
+- [x] Haptic feedback setting persists
+- [x] First launch flag persists
 
 ---
 
 ## 8. Notifications
 
 ### Permission
-- [ ] Can enable/disable in settings
-- [ ] Per-item toggle works
+- [x] Can enable/disable in settings
+- [x] Per-item toggle works
 
 ### Scheduling
-- [ ] Notification scheduled at 90% of interval
-- [ ] Correct notification appears at scheduled time
-- [ ] Notification shows item name
-- [ ] Notification shows relevant message
+- [x] Notification scheduled at 90% of interval
+- [x] Correct notification appears at scheduled time
+- [x] Notification shows item name
+- [x] Notification shows relevant message
 
 ### Interaction
-- [ ] Tapping notification opens app
-- [ ] Notification dismissed after tap
+- [x] Tapping notification opens app
+- [x] Notification dismissed after tap
 
 ### After Reset
-- [ ] New notification scheduled after reset
-- [ ] Old notification cancelled
+- [x] New notification scheduled after reset
+- [x] Old notification cancelled
 
 ---
 
 ## 9. Settings Screen
 
 ### Access
-- [ ] Settings icon opens settings screen
-- [ ] Back navigation works
+- [x] Settings icon opens settings screen
+- [x] Back navigation works
 
 ### Notification Settings
-- [ ] Master toggle for notifications
-- [ ] Toggle reflects current state
-- [ ] Changes apply immediately
+- [x] Master toggle for notifications
+- [x] Toggle reflects current state
+- [x] Changes apply immediately
 
 ### Sort Order
-- [ ] Sort order option is visible
-- [ ] Can change sort order
-- [ ] Change applies to home screen
+- [x] Sort order option is visible
+- [x] Can change sort order
+- [x] Change applies to home screen
 
 ### Haptic Feedback
-- [ ] Toggle is present
+- [x] Toggle is present
 - [ ] Toggle reflects current state
 - [ ] Enabling/disabling works
 
 ### About Section (if present)
-- [ ] Version number displays
-- [ ] Any links work
+- [x] Version number displays
+- [x] Any links work
 
 ---
 
 ## 10. Edge Cases
 
 ### Large Numbers
-- [ ] 1000+ days displays correctly
-- [ ] Progress > 200% handles gracefully
+- [x] 1000+ days displays correctly
+- [x] Progress > 200% handles gracefully
 
 ### Long Names
-- [ ] Long item names truncate with ellipsis
-- [ ] UI doesn't break with long names
+- [x] Long item names truncate with ellipsis
+- [x] UI doesn't break with long names
 
 ### Many Items
-- [ ] 50+ items scroll smoothly
-- [ ] No performance issues
+- [x] 50+ items scroll smoothly
+- [x] No performance issues
 
 ### Dates
-- [ ] Future reset dates handled (shows negative days)
-- [ ] Timezone changes don't break calculations
-- [ ] Daylight saving transitions work
+- [x] Future reset dates handled (shows negative days)
+- [x] Timezone changes don't break calculations
+- [x] Daylight saving transitions work
 
 ### Empty States
-- [ ] Deleting last item shows empty state
-- [ ] Empty state prompts adding item
+- [x] Deleting last item shows empty state
+- [x] Empty state prompts adding item
 
 ---
 
 ## 11. UI/UX Quality
 
 ### Animations
-- [ ] Dialog slide-up is smooth
-- [ ] Progress ring animations smooth
-- [ ] List animations (if any) are smooth
+- [x] Dialog slide-up is smooth
+- [x] Progress ring animations smooth
+- [x] List animations (if any) are smooth
 
 ### Haptic Feedback
-- [ ] FAB tap has feedback
-- [ ] Reset has feedback
-- [ ] Long-press has feedback
-- [ ] Save has feedback
+- [x] FAB tap has feedback
+- [x] Reset has feedback
+- [x] Long-press has feedback
+- [x] Save has feedback
 
 ### Dark Theme
-- [ ] All text is readable
-- [ ] No contrast issues
-- [ ] Colors are consistent
+- [x] All text is readable
+- [x] No contrast issues
+- [x] Colors are consistent
 
 ### Touch Targets
-- [ ] All buttons are easily tappable
-- [ ] No accidental taps on adjacent elements
+- [x] All buttons are easily tappable
+- [x] No accidental taps on adjacent elements
 
 ### Keyboard
-- [ ] Keyboard doesn't obscure inputs
-- [ ] Keyboard dismisses appropriately
+- [x] Keyboard doesn't obscure inputs
+- [x] Keyboard dismisses appropriately
 
 ---
 
@@ -347,32 +347,32 @@ Use this checklist to verify all app functionality before release.
 
 ## Test Results Summary
 
-| Category | Pass | Fail | Notes |
-|----------|------|------|-------|
-| First Launch | | | |
-| Create | | | |
-| Read | | | |
-| Update | | | |
-| Delete | | | |
-| Reset | | | |
-| Persistence | | | |
-| Notifications | | | |
-| Settings | | | |
-| Edge Cases | | | |
-| UI/UX | | | |
-| Performance | | | |
+| Category      | Pass | Fail | Notes |
+| ------------- | ---- | ---- | ----- |
+| First Launch  |      |      |       |
+| Create        |      |      |       |
+| Read          |      |      |       |
+| Update        |      |      |       |
+| Delete        |      |      |       |
+| Reset         |      |      |       |
+| Persistence   |      |      |       |
+| Notifications |      |      |       |
+| Settings      |      |      |       |
+| Edge Cases    |      |      |       |
+| UI/UX         |      |      |       |
+| Performance   |      |      |       |
 
 ---
 
 ## Sign-off
 
-**Tested By:** _______________
-**Date:** _______________
-**Device(s):** _______________
-**Android Version(s):** _______________
-**APK Version:** _______________
+**Tested By:** _______________Rukhtam Amin
+**Date:** _______________06-Jan-2026
+**Device(s):** _______________A52s
+**Android Version(s):** _______________14
+**APK Version:** _______________1.0
 
-**Ready for Release:** [ ] Yes [ ] No (list blockers below)
+**Ready for Release:** [x] Yes [ ] No (list blockers below)
 
 **Notes/Issues Found:**
 

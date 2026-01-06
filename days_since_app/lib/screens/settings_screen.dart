@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../providers/settings_provider.dart';
 import '../providers/tracked_items_provider.dart';
+import '../services/haptic_service.dart';
 import '../services/notification_service.dart';
 
 /// Settings screen allowing users to configure app behavior.
@@ -158,7 +158,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   : warningColor,
             ),
           ),
-          value: settings.notificationsEnabled && _notificationsPermissionGranted,
+          value:
+              settings.notificationsEnabled && _notificationsPermissionGranted,
           onChanged: (value) async {
             if (!_notificationsPermissionGranted) {
               // Request permission
@@ -186,7 +187,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
             settings.notificationsEnabled && _notificationsPermissionGranted
                 ? Icons.notifications_active
                 : Icons.notifications_off,
-            color: settings.notificationsEnabled && _notificationsPermissionGranted
+            color:
+                settings.notificationsEnabled && _notificationsPermissionGranted
                 ? colorScheme.primary
                 : theme.iconTheme.color?.withValues(alpha: 0.5),
           ),
@@ -194,10 +196,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
         // Notification time picker
         ListTile(
-          enabled: settings.notificationsEnabled && _notificationsPermissionGranted,
+          enabled:
+              settings.notificationsEnabled && _notificationsPermissionGranted,
           leading: Icon(
             Icons.access_time,
-            color: settings.notificationsEnabled && _notificationsPermissionGranted
+            color:
+                settings.notificationsEnabled && _notificationsPermissionGranted
                 ? colorScheme.primary
                 : theme.iconTheme.color?.withValues(alpha: 0.5),
           ),
@@ -246,7 +250,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           onChanged: (value) {
             settings.hapticFeedbackEnabled = value;
             if (value) {
-              HapticFeedback.mediumImpact();
+              HapticService.mediumImpact();
             }
           },
           secondary: Icon(
@@ -278,10 +282,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   /// Build data-related settings
-  Widget _buildDataSettings(
-    BuildContext context,
-    SettingsProvider settings,
-  ) {
+  Widget _buildDataSettings(BuildContext context, SettingsProvider settings) {
     final theme = Theme.of(context);
     final itemsProvider = context.read<TrackedItemsProvider>();
     // Use consistent colors for error and warning across themes
@@ -331,10 +332,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   /// Show theme mode picker
-  void _showThemeModePicker(
-    BuildContext context,
-    SettingsProvider settings,
-  ) {
+  void _showThemeModePicker(BuildContext context, SettingsProvider settings) {
     final theme = Theme.of(context);
     final options = [
       (AppThemeMode.light, 'Light', Icons.light_mode),
@@ -359,10 +357,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
             ),
             const SizedBox(height: 16),
-            Text(
-              'Theme',
-              style: theme.textTheme.titleLarge,
-            ),
+            Text('Theme', style: theme.textTheme.titleLarge),
             const SizedBox(height: 8),
             Text(
               'Choose your preferred appearance',
@@ -406,88 +401,41 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void _showNotificationTimePicker(
     BuildContext context,
     SettingsProvider settings,
-  ) {
-    final theme = Theme.of(context);
-    final hours = List.generate(24, (i) => i);
-
-    showModalBottomSheet(
+  ) async {
+    final TimeOfDay? selectedTime = await showTimePicker(
       context: context,
-      builder: (context) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Handle bar
-            Container(
-              margin: const EdgeInsets.only(top: 12),
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: theme.dividerColor,
-                borderRadius: BorderRadius.circular(2),
+      initialTime: settings.notificationTime,
+      initialEntryMode: TimePickerEntryMode.dial,
+      helpText: 'Select notification time',
+      confirmText: 'Set',
+      cancelText: 'Cancel',
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            timePickerTheme: TimePickerThemeData(
+              backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+              hourMinuteShape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              dayPeriodShape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
               ),
             ),
-            const SizedBox(height: 16),
-            Text(
-              'Notification Time',
-              style: theme.textTheme.titleLarge,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'When should we remind you?',
-              style: theme.textTheme.bodyMedium,
-            ),
-            const SizedBox(height: 16),
-            SizedBox(
-              height: 200,
-              child: ListView.builder(
-                itemCount: hours.length,
-                itemBuilder: (context, index) {
-                  final hour = hours[index];
-                  final isSelected = hour == settings.notificationTimeHour;
-                  String timeString;
-                  if (hour == 0) {
-                    timeString = '12:00 AM';
-                  } else if (hour < 12) {
-                    timeString = '$hour:00 AM';
-                  } else if (hour == 12) {
-                    timeString = '12:00 PM';
-                  } else {
-                    timeString = '${hour - 12}:00 PM';
-                  }
-
-                  return ListTile(
-                    title: Text(
-                      timeString,
-                      style: TextStyle(
-                        color: isSelected ? theme.colorScheme.primary : null,
-                        fontWeight: isSelected ? FontWeight.bold : null,
-                      ),
-                    ),
-                    trailing: isSelected
-                        ? Icon(Icons.check, color: theme.colorScheme.primary)
-                        : null,
-                    onTap: () {
-                      settings.notificationTimeHour = hour;
-                      _hapticFeedback(settings);
-                      Navigator.pop(context);
-                      _rescheduleAllNotifications();
-                    },
-                  );
-                },
-              ),
-            ),
-            const SizedBox(height: 16),
-          ],
-        ),
-      ),
+          ),
+          child: child!,
+        );
+      },
     );
+
+    if (selectedTime != null) {
+      settings.notificationTime = selectedTime;
+      _hapticFeedback(settings);
+      _rescheduleAllNotifications();
+    }
   }
 
   /// Show sort order picker
-  void _showSortOrderPicker(
-    BuildContext context,
-    SettingsProvider settings,
-  ) {
+  void _showSortOrderPicker(BuildContext context, SettingsProvider settings) {
     final theme = Theme.of(context);
     final options = [
       ('status', 'Status (Overdue first)', Icons.priority_high),
@@ -513,10 +461,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
             ),
             const SizedBox(height: 16),
-            Text(
-              'Sort Order',
-              style: theme.textTheme.titleLarge,
-            ),
+            Text('Sort Order', style: theme.textTheme.titleLarge),
             const SizedBox(height: 16),
             ...options.map((option) {
               final isSelected = option.$1 == settings.sortOrder;
@@ -577,9 +522,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
     TrackedItemsProvider provider,
   ) {
     if (provider.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No items to delete')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('No items to delete')));
       return;
     }
 
@@ -612,7 +557,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
               }
             },
             style: TextButton.styleFrom(
-                foregroundColor: const Color(0xFFF44336)),
+              foregroundColor: const Color(0xFFF44336),
+            ),
             child: const Text('Delete All'),
           ),
         ],
@@ -649,7 +595,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
               }
             },
             style: TextButton.styleFrom(
-                foregroundColor: const Color(0xFFFF9800)),
+              foregroundColor: const Color(0xFFFF9800),
+            ),
             child: const Text('Reset'),
           ),
         ],
@@ -671,11 +618,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           color: theme.colorScheme.primary,
           borderRadius: BorderRadius.circular(12),
         ),
-        child: const Icon(
-          Icons.timer,
-          color: Colors.white,
-          size: 28,
-        ),
+        child: const Icon(Icons.timer, color: Colors.white, size: 28),
       ),
       children: [
         const Text(
@@ -694,13 +637,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
   /// Trigger haptic feedback if enabled
   void _hapticFeedback(SettingsProvider settings) {
     if (settings.hapticFeedbackEnabled) {
-      HapticFeedback.lightImpact();
+      HapticService.lightImpact();
     }
   }
 
   /// Reschedule all notifications after settings change
   void _rescheduleAllNotifications() {
     final items = context.read<TrackedItemsProvider>().items;
-    NotificationService().updateAllNotifications(items);
+    final settings = context.read<SettingsProvider>();
+    NotificationService().updateAllNotifications(
+      items,
+      notificationHour: settings.notificationTimeHour,
+      notificationMinute: settings.notificationTimeMinute,
+    );
   }
 }

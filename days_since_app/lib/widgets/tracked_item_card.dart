@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../constants/app_colors.dart';
 import '../models/tracked_item.dart';
+import '../providers/settings_provider.dart';
 import '../providers/tracked_items_provider.dart';
+import '../services/haptic_service.dart';
 import '../utils/icon_utils.dart';
+import '../utils/milestone_utils.dart';
 import 'progress_ring.dart';
 import 'edit_item_dialog.dart';
 
@@ -14,15 +16,16 @@ import 'edit_item_dialog.dart';
 class TrackedItemCard extends StatelessWidget {
   final TrackedItem item;
 
-  const TrackedItemCard({
-    super.key,
-    required this.item,
-  });
+  const TrackedItemCard({super.key, required this.item});
 
   @override
   Widget build(BuildContext context) {
     final statusColor = AppColors.fromHex(item.statusColor);
     final itemColor = AppColors.fromHex(item.color);
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final textTertiaryColor = isDarkMode
+        ? AppColors.textTertiary
+        : AppColors.textTertiaryLight;
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -47,17 +50,17 @@ class TrackedItemCard extends StatelessWidget {
                     Text(
                       item.daysSinceReset.toString(),
                       style: Theme.of(context).textTheme.displayLarge?.copyWith(
-                            color: statusColor,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 64,
-                          ),
+                        color: statusColor,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 64,
+                      ),
                     ),
                     // "days" label
                     Text(
                       item.daysSinceReset == 1 ? 'day' : 'days',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: AppColors.textTertiary,
-                          ),
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodySmall?.copyWith(color: textTertiaryColor),
                     ),
                   ],
                 ),
@@ -90,34 +93,21 @@ class TrackedItemCard extends StatelessWidget {
                     const SizedBox(height: 8),
                     // Status text
                     _buildStatusText(context, statusColor),
-                    const SizedBox(height: 4),
-                    // Interval info
-                    Text(
-                      'Every ${item.recommendedIntervalDays} days',
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
                   ],
                 ),
               ),
               // Reset button - Accessibility: 48x48dp touch target
               IconButton(
                 onPressed: () => _resetItem(context),
-                padding: const EdgeInsets.all(12),
-                constraints: const BoxConstraints(
-                  minWidth: 48,
-                  minHeight: 48,
-                ),
+                padding: const EdgeInsets.all(16),
+                constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
                 icon: Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
                     color: statusColor.withValues(alpha: 0.1),
                     shape: BoxShape.circle,
                   ),
-                  child: Icon(
-                    Icons.refresh,
-                    color: statusColor,
-                    size: 24,
-                  ),
+                  child: Icon(Icons.refresh, color: statusColor, size: 24),
                 ),
                 tooltip: 'Reset to today',
               ),
@@ -155,28 +145,43 @@ class TrackedItemCard extends StatelessWidget {
     return Text(
       statusText,
       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-            color: statusColor.withValues(alpha: 0.7),  // Reduced saturation for visual hierarchy
-            fontWeight: FontWeight.w500,
-          ),
+        color: statusColor.withValues(
+          alpha: 0.7,
+        ), // Reduced saturation for visual hierarchy
+        fontWeight: FontWeight.w500,
+      ),
     );
   }
 
   /// Reset the item to today's date
   void _resetItem(BuildContext context) {
-    HapticFeedback.mediumImpact();
+    if (context.read<SettingsProvider>().hapticFeedbackEnabled) {
+      HapticService.mediumImpact();
+    }
     final provider = context.read<TrackedItemsProvider>();
     final messenger = ScaffoldMessenger.of(context);
     final itemName = item.name;
     final previousDate = item.lastResetDate;
 
+    // Calculate days since last reset to check for milestones
+    final daysSinceReset = DateTime.now().difference(item.lastResetDate).inDays;
+
+    // Check if this is a milestone achievement
+    final isMilestone = MilestoneUtils.isMilestone(daysSinceReset);
+
     provider.resetItem(item.id).then((success) {
       if (success) {
+        // Clear any existing snackbars first to prevent stacking
+        messenger.clearSnackBars();
         messenger.showSnackBar(
           SnackBar(
             content: Text('$itemName reset to today'),
+            duration: const Duration(seconds: 3),
+            dismissDirection: DismissDirection.horizontal,
             action: SnackBarAction(
               label: 'Undo',
               onPressed: () {
+                messenger.hideCurrentSnackBar();
                 // Undo by setting back to previous date
                 final updatedItem = item.copyWith(lastResetDate: previousDate);
                 provider.updateItem(updatedItem);
@@ -184,13 +189,29 @@ class TrackedItemCard extends StatelessWidget {
             ),
           ),
         );
+
+        // Show celebration if milestone reached
+        if (isMilestone && context.mounted) {
+          // Delay slightly to let the snackbar show first
+          Future.delayed(const Duration(milliseconds: 500), () {
+            if (context.mounted) {
+              MilestoneUtils.showCelebration(
+                context: context,
+                itemName: itemName,
+                days: daysSinceReset,
+              );
+            }
+          });
+        }
       }
     });
   }
 
   /// Show edit dialog for this item
   void _showEditDialog(BuildContext context) {
-    HapticFeedback.lightImpact();
+    if (context.read<SettingsProvider>().hapticFeedbackEnabled) {
+      HapticService.lightImpact();
+    }
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -201,10 +222,20 @@ class TrackedItemCard extends StatelessWidget {
 
   /// Show options menu (edit/delete)
   void _showOptionsMenu(BuildContext context) {
-    HapticFeedback.mediumImpact();
+    if (context.read<SettingsProvider>().hapticFeedbackEnabled) {
+      HapticService.mediumImpact();
+    }
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final backgroundColor = isDarkMode
+        ? AppColors.surface
+        : AppColors.surfaceLight;
+    final dividerColor = isDarkMode
+        ? AppColors.divider
+        : AppColors.dividerLight;
+
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppColors.surface,
+      backgroundColor: backgroundColor,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -218,7 +249,7 @@ class TrackedItemCard extends StatelessWidget {
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: AppColors.divider,
+                color: dividerColor,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -297,9 +328,9 @@ class TrackedItemCard extends StatelessWidget {
             onPressed: () {
               Navigator.pop(context);
               context.read<TrackedItemsProvider>().deleteItem(item.id);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('${item.name} deleted')),
-              );
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(SnackBar(content: Text('${item.name} deleted')));
             },
             style: TextButton.styleFrom(foregroundColor: AppColors.error),
             child: const Text('Delete'),

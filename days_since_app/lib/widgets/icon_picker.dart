@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
 
 import '../constants/app_colors.dart';
+import '../providers/settings_provider.dart';
+import '../services/haptic_service.dart';
 import '../utils/icon_utils.dart';
 
 /// Bottom sheet for selecting an icon.
@@ -18,11 +20,29 @@ class IconPicker extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final iconsByCategory = IconUtils.iconsByCategory;
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
+    // Theme-aware colors
+    final backgroundColor = isDarkMode
+        ? AppColors.surface
+        : AppColors.surfaceLight;
+    final dividerColor = isDarkMode
+        ? AppColors.divider
+        : AppColors.dividerLight;
+    final surfaceVariantColor = isDarkMode
+        ? AppColors.surfaceVariant
+        : AppColors.surfaceVariantLight;
+    final textSecondaryColor = isDarkMode
+        ? AppColors.textSecondary
+        : AppColors.textSecondaryLight;
+    final textPrimaryColor = isDarkMode
+        ? AppColors.textPrimary
+        : AppColors.textPrimaryLight;
 
     return Container(
-      decoration: const BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
       ),
       child: DraggableScrollableSheet(
         initialChildSize: 0.7,
@@ -38,7 +58,7 @@ class IconPicker extends StatelessWidget {
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: AppColors.divider,
+                  color: dividerColor,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -50,11 +70,12 @@ class IconPicker extends StatelessWidget {
                   children: [
                     Text(
                       'Choose Icon',
-                      style: Theme.of(context).textTheme.headlineSmall,
+                      style: Theme.of(context).textTheme.headlineSmall
+                          ?.copyWith(color: textPrimaryColor),
                     ),
                     IconButton(
                       onPressed: () => Navigator.pop(context),
-                      icon: const Icon(Icons.close),
+                      icon: Icon(Icons.close, color: textSecondaryColor),
                     ),
                   ],
                 ),
@@ -76,7 +97,8 @@ class IconPicker extends StatelessWidget {
                           padding: const EdgeInsets.symmetric(vertical: 12),
                           child: Text(
                             category,
-                            style: Theme.of(context).textTheme.labelLarge,
+                            style: Theme.of(context).textTheme.labelLarge
+                                ?.copyWith(color: textSecondaryColor),
                           ),
                         ),
                         GridView.builder(
@@ -84,10 +106,10 @@ class IconPicker extends StatelessWidget {
                           physics: const NeverScrollableScrollPhysics(),
                           gridDelegate:
                               const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 6,
-                            mainAxisSpacing: 8,
-                            crossAxisSpacing: 8,
-                          ),
+                                crossAxisCount: 6,
+                                mainAxisSpacing: 8,
+                                crossAxisSpacing: 8,
+                              ),
                           itemCount: icons.length,
                           itemBuilder: (context, iconIndex) {
                             final iconName = icons[iconIndex];
@@ -95,7 +117,9 @@ class IconPicker extends StatelessWidget {
 
                             return InkWell(
                               onTap: () {
-                                HapticFeedback.selectionClick();
+                                if (context.read<SettingsProvider>().hapticFeedbackEnabled) {
+                                  HapticService.selectionClick();
+                                }
                                 onIconSelected(iconName);
                               },
                               borderRadius: BorderRadius.circular(12),
@@ -103,7 +127,7 @@ class IconPicker extends StatelessWidget {
                                 decoration: BoxDecoration(
                                   color: isSelected
                                       ? AppColors.primary.withValues(alpha: 0.2)
-                                      : AppColors.surfaceVariant,
+                                      : surfaceVariantColor,
                                   borderRadius: BorderRadius.circular(12),
                                   border: isSelected
                                       ? Border.all(
@@ -116,7 +140,7 @@ class IconPicker extends StatelessWidget {
                                   IconUtils.getIconData(iconName),
                                   color: isSelected
                                       ? AppColors.primary
-                                      : AppColors.textSecondary,
+                                      : textSecondaryColor,
                                   size: 24,
                                 ),
                               ),

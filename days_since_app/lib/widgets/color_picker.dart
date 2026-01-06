@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
 
 import '../constants/app_colors.dart';
+import '../providers/settings_provider.dart';
+import '../services/haptic_service.dart';
 
 /// Bottom sheet for selecting a color.
 class ColorPickerSheet extends StatelessWidget {
@@ -16,11 +18,27 @@ class ColorPickerSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
+    // Theme-aware colors
+    final backgroundColor = isDarkMode
+        ? AppColors.surface
+        : AppColors.surfaceLight;
+    final dividerColor = isDarkMode
+        ? AppColors.divider
+        : AppColors.dividerLight;
+    final textPrimaryColor = isDarkMode
+        ? AppColors.textPrimary
+        : AppColors.textPrimaryLight;
+    final textSecondaryColor = isDarkMode
+        ? AppColors.textSecondary
+        : AppColors.textSecondaryLight;
+
     return Container(
       padding: const EdgeInsets.all(24),
-      decoration: const BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -33,7 +51,7 @@ class ColorPickerSheet extends StatelessWidget {
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: AppColors.divider,
+                color: dividerColor,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -41,7 +59,9 @@ class ColorPickerSheet extends StatelessWidget {
           // Header
           Text(
             'Choose Color',
-            style: Theme.of(context).textTheme.headlineSmall,
+            style: Theme.of(
+              context,
+            ).textTheme.headlineSmall?.copyWith(color: textPrimaryColor),
           ),
           const SizedBox(height: 24),
           // Color grid
@@ -61,7 +81,9 @@ class ColorPickerSheet extends StatelessWidget {
 
               return InkWell(
                 onTap: () {
-                  HapticFeedback.selectionClick();
+                  if (context.read<SettingsProvider>().hapticFeedbackEnabled) {
+                    HapticService.selectionClick();
+                  }
                   onColorSelected(colorHex);
                 },
                 borderRadius: BorderRadius.circular(24),
@@ -71,10 +93,7 @@ class ColorPickerSheet extends StatelessWidget {
                     color: color,
                     shape: BoxShape.circle,
                     border: isSelected
-                        ? Border.all(
-                            color: AppColors.textPrimary,
-                            width: 3,
-                          )
+                        ? Border.all(color: textPrimaryColor, width: 3)
                         : null,
                     boxShadow: isSelected
                         ? [
@@ -87,11 +106,7 @@ class ColorPickerSheet extends StatelessWidget {
                         : null,
                   ),
                   child: isSelected
-                      ? const Icon(
-                          Icons.check,
-                          color: Colors.white,
-                          size: 28,
-                        )
+                      ? const Icon(Icons.check, color: Colors.white, size: 28)
                       : null,
                 ),
               );
@@ -101,7 +116,9 @@ class ColorPickerSheet extends StatelessWidget {
           // Additional colors row
           Text(
             'More Colors',
-            style: Theme.of(context).textTheme.labelLarge,
+            style: Theme.of(
+              context,
+            ).textTheme.labelLarge?.copyWith(color: textSecondaryColor),
           ),
           const SizedBox(height: 12),
           SingleChildScrollView(
@@ -115,7 +132,9 @@ class ColorPickerSheet extends StatelessWidget {
                   padding: const EdgeInsets.only(right: 12),
                   child: InkWell(
                     onTap: () {
-                      HapticFeedback.selectionClick();
+                      if (context.read<SettingsProvider>().hapticFeedbackEnabled) {
+                        HapticService.selectionClick();
+                      }
                       onColorSelected(colorHex);
                     },
                     borderRadius: BorderRadius.circular(20),
@@ -127,10 +146,7 @@ class ColorPickerSheet extends StatelessWidget {
                         color: color,
                         shape: BoxShape.circle,
                         border: isSelected
-                            ? Border.all(
-                                color: AppColors.textPrimary,
-                                width: 3,
-                              )
+                            ? Border.all(color: textPrimaryColor, width: 3)
                             : null,
                       ),
                       child: isSelected

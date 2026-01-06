@@ -1,74 +1,73 @@
 import 'package:flutter/material.dart';
 
-/// App-wide color constants following Material Design 3.
-/// Supports both dark and light theme designs.
+/// App-wide color constants following Modern Minimalist design.
+/// Supports both "Soft Minimal" (Light) and "Midnight Neon" (Dark) themes.
 class AppColors {
   // Prevent instantiation
   AppColors._();
 
-  // ========== Dark Theme Colors ==========
+  // ========== Dark Theme Colors ("Midnight Neon") ==========
 
-  // Background colors (dark)
-  static const Color background = Color(0xFF121212);
-  static const Color surface = Color(0xFF1E1E1E);
-  static const Color surfaceVariant = Color(0xFF2C2C2C);
-  static const Color cardBackground = Color(0xFF1E1E1E);
+  // Background colors (dark) - Deep Slate, richer than pure black
+  static const Color background = Color(0xFF0F172A);
+  static const Color surface = Color(0xFF1E293B);
+  static const Color surfaceVariant = Color(0xFF334155);
+  static const Color cardBackground = Color(0xFF1E293B);
 
-  // Text colors (dark)
-  static const Color textPrimary = Color(0xFFFFFFFF);
-  static const Color textSecondary = Color(0xFFB3B3B3);
-  static const Color textTertiary = Color(0xFF757575);
+  // Text colors (dark) - High contrast off-white
+  static const Color textPrimary = Color(0xFFF8FAFC);
+  static const Color textSecondary = Color(0xFF94A3B8);
+  static const Color textTertiary = Color(0xFF64748B);
 
   // Divider and border colors (dark)
-  static const Color divider = Color(0xFF2C2C2C);
-  static const Color border = Color(0xFF3C3C3C);
+  static const Color divider = Color(0xFF334155);
+  static const Color border = Color(0xFF475569);
 
-  // ========== Light Theme Colors ==========
+  // ========== Light Theme Colors ("Soft Minimal") ==========
 
-  // Background colors (light)
-  static const Color backgroundLight = Color(0xFFFAFAFA);
+  // Background colors (light) - Off-white/Blue-grey, never pure white
+  static const Color backgroundLight = Color(0xFFF2F5F9);
   static const Color surfaceLight = Color(0xFFFFFFFF);
-  static const Color surfaceVariantLight = Color(0xFFF0F0F0);
+  static const Color surfaceVariantLight = Color(0xFFE2E8F0);
   static const Color cardBackgroundLight = Color(0xFFFFFFFF);
 
-  // Text colors (light)
-  static const Color textPrimaryLight = Color(0xFF1C1B1F);
-  static const Color textSecondaryLight = Color(0xFF49454F);
-  static const Color textTertiaryLight = Color(0xFF79747E);
+  // Text colors (light) - Slate dark, softer than pure black
+  static const Color textPrimaryLight = Color(0xFF1E293B);
+  static const Color textSecondaryLight = Color(0xFF64748B);
+  static const Color textTertiaryLight = Color(0xFF94A3B8);
 
   // Divider and border colors (light)
-  static const Color dividerLight = Color(0xFFE0E0E0);
-  static const Color borderLight = Color(0xFFCAC4D0);
+  static const Color dividerLight = Color(0xFFE2E8F0);
+  static const Color borderLight = Color(0xFFCBD5E1);
 
   // ========== Shared Colors (both themes) ==========
 
-  // Status colors - WCAG 2.1 AA compliant (4.5:1 contrast ratio)
-  // Updated for accessibility compliance
-  static const Color statusGood = Color(0xFF66BB6A);      // Lighter green for better contrast
-  static const Color statusWarning = Color(0xFFFFB300);   // Adjusted amber for contrast
-  static const Color statusOverdue = Color(0xFFEF5350);   // Adjusted red for contrast
+  // Status colors - Modern neon pastels
+  static const Color statusGood = Color(0xFF34D399);      // Neon green/teal
+  static const Color statusWarning = Color(0xFFFBBF24);   // Warm amber
+  static const Color statusOverdue = Color(0xFFEF4444);   // Alert red
 
-  // Accent colors for items - These work well on both backgrounds
-  static const Color accentBlue = Color(0xFF2196F3);
-  static const Color accentPurple = Color(0xFF9C27B0);
-  static const Color accentTeal = Color(0xFF009688);
-  static const Color accentOrange = Color(0xFFFF9800);
-  static const Color accentPink = Color(0xFFE91E63);
-  static const Color accentIndigo = Color(0xFF3F51B5);
-  static const Color accentCyan = Color(0xFF00BCD4);
-  static const Color accentLime = Color(0xFFCDDC39);
+  // Accent colors for items - Neon pastels
+  static const Color accentBlue = Color(0xFF29B6F6);      // Light blue
+  static const Color accentPurple = Color(0xFFA78BFA);    // Pastel purple
+  static const Color accentTeal = Color(0xFF2DD4BF);      // Teal/Cyan
+  static const Color accentOrange = Color(0xFFFB923C);    // Warm orange
+  static const Color accentPink = Color(0xFFF472B6);      // Pink
+  static const Color accentIndigo = Color(0xFF818CF8);    // Indigo
+  static const Color accentCyan = Color(0xFF22D3EE);      // Cyan
+  static const Color accentLime = Color(0xFFA3E635);      // Lime green
 
-  // Interactive colors - Primary and secondary
-  static const Color primary = Color(0xFF6200EE);
-  static const Color primaryVariant = Color(0xFF3700B3);
-  static const Color primaryLight = Color(0xFF6750A4);
-  static const Color primaryContainerLight = Color(0xFFEADDFF);
-  static const Color secondary = Color(0xFF03DAC6);
-  static const Color secondaryLight = Color(0xFF625B71);
+  // Interactive colors - Modern purple
+  static const Color primary = Color(0xFF6C63FF);         // Modern purple
+  static const Color primaryVariant = Color(0xFF5B52E0);
+  static const Color primaryLight = Color(0xFF8B83FF);
+  static const Color primaryContainerLight = Color(0xFFE8E6FF);
+  static const Color secondary = Color(0xFF34D399);       // Neon green
+  static const Color secondaryLight = Color(0xFF64748B);
 
   // Error colors
-  static const Color error = Color(0xFFCF6679);
-  static const Color errorLight = Color(0xFFB3261E);
+  static const Color error = Color(0xFFEF4444);
+  static const Color errorLight = Color(0xFFDC2626);
 
   // Overlay colors
   static const Color overlay = Color(0x80000000);
@@ -89,15 +88,15 @@ class AppColors {
 
   /// List of accent color hex codes for storage
   static const List<String> accentColorHexCodes = [
-    '#2196F3', // Blue
-    '#9C27B0', // Purple
-    '#009688', // Teal
-    '#FF9800', // Orange
-    '#E91E63', // Pink
-    '#3F51B5', // Indigo
-    '#00BCD4', // Cyan
-    '#CDDC39', // Lime
-    '#66BB6A', // Green (updated for accessibility)
+    '#29B6F6', // Light Blue
+    '#A78BFA', // Pastel Purple
+    '#2DD4BF', // Teal
+    '#FB923C', // Orange
+    '#F472B6', // Pink
+    '#818CF8', // Indigo
+    '#22D3EE', // Cyan
+    '#A3E635', // Lime
+    '#34D399', // Neon Green
   ];
 
   /// Convert hex string to Color

@@ -1,0 +1,39 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background Circle -->
+  <circle cx="512" cy="512" r="448" fill="#1A1A1A"/>
+
+  <!-- Progress Ring Background (inactive) -->
+  <circle
+    cx="512"
+    cy="512"
+    r="324"
+    fill="none"
+    stroke="#2A2A2A"
+    stroke-width="72"
+    stroke-linecap="round"
+  />
+
+  <!-- Progress Ring Active (270° arc = 75% progress) -->
+  <circle
+    cx="512"
+    cy="512"
+    r="324"
+    fill="none"
+    stroke="#4CAF50"
+    stroke-width="72"
+    stroke-linecap="round"
+    stroke-dasharray="1527 509"
+    transform="rotate(-90 512 512)"
+  />
+
+  <!-- Number "7" -->
+  <text
+    x="512"
+    y="630"
+    font-family="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+    font-size="420"
+    font-weight="700"
+    fill="#FFFFFF"
+    text-anchor="middle"
+  >7</text>
+</svg>

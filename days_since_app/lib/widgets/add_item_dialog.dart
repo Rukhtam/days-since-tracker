@@ -4,7 +4,9 @@ import 'package:provider/provider.dart';
 
 import '../constants/app_colors.dart';
 import '../constants/templates.dart';
+import '../providers/settings_provider.dart';
 import '../providers/tracked_items_provider.dart';
+import '../services/haptic_service.dart';
 import '../utils/icon_utils.dart';
 import 'icon_picker.dart';
 import 'color_picker.dart';
@@ -35,7 +37,9 @@ class _AddItemDialogState extends State<AddItemDialog> {
   }
 
   void _selectTemplate(ItemTemplate template) {
-    HapticFeedback.selectionClick();
+    if (context.read<SettingsProvider>().hapticFeedbackEnabled) {
+      HapticService.selectionClick();
+    }
     setState(() {
       _nameController.text = template.name;
       _intervalController.text = template.recommendedIntervalDays.toString();
@@ -48,7 +52,9 @@ class _AddItemDialogState extends State<AddItemDialog> {
   Future<void> _saveItem() async {
     if (!_formKey.currentState!.validate()) return;
 
-    HapticFeedback.mediumImpact();
+    if (context.read<SettingsProvider>().hapticFeedbackEnabled) {
+      HapticService.mediumImpact();
+    }
 
     final provider = context.read<TrackedItemsProvider>();
     final success = await provider.addItem(
@@ -77,7 +83,9 @@ class _AddItemDialogState extends State<AddItemDialog> {
   }
 
   void _showIconPicker() {
-    HapticFeedback.selectionClick();
+    if (context.read<SettingsProvider>().hapticFeedbackEnabled) {
+      HapticService.selectionClick();
+    }
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -93,7 +101,9 @@ class _AddItemDialogState extends State<AddItemDialog> {
   }
 
   void _showColorPicker() {
-    HapticFeedback.selectionClick();
+    if (context.read<SettingsProvider>().hapticFeedbackEnabled) {
+      HapticService.selectionClick();
+    }
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -109,104 +119,129 @@ class _AddItemDialogState extends State<AddItemDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
+    // Theme-aware colors
+    final backgroundColor = isDarkMode
+        ? AppColors.surface
+        : AppColors.surfaceLight;
+    final dividerColor = isDarkMode
+        ? AppColors.divider
+        : AppColors.dividerLight;
+    final textPrimaryColor = isDarkMode
+        ? AppColors.textPrimary
+        : AppColors.textPrimaryLight;
+    final textSecondaryColor = isDarkMode
+        ? AppColors.textSecondary
+        : AppColors.textSecondaryLight;
+
     return Container(
-      decoration: const BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      child: DraggableScrollableSheet(
-        initialChildSize: 0.9,
-        minChildSize: 0.5,
-        maxChildSize: 0.95,
-        expand: false,
-        builder: (context, scrollController) {
-          return Column(
-            children: [
-              // Handle bar
-              Container(
-                margin: const EdgeInsets.only(top: 12),
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: AppColors.divider,
-                  borderRadius: BorderRadius.circular(2),
+      child: SafeArea(
+        top: false,
+        child: DraggableScrollableSheet(
+          initialChildSize: 0.9,
+          minChildSize: 0.5,
+          maxChildSize: 0.95,
+          expand: false,
+          builder: (context, scrollController) {
+            return Column(
+              children: [
+                // Handle bar
+                Container(
+                  margin: const EdgeInsets.only(top: 12),
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: dividerColor,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
                 ),
-              ),
-              // Header
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Add Item',
-                      style: Theme.of(context).textTheme.headlineSmall,
-                    ),
-                    IconButton(
-                      onPressed: () => Navigator.pop(context),
-                      icon: const Icon(Icons.close),
-                    ),
-                  ],
-                ),
-              ),
-              // Content
-              Expanded(
-                child: SingleChildScrollView(
-                  controller: scrollController,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                // Header
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      // Templates section
-                      if (_showTemplates) ...[
-                        Text(
-                          'Quick Add from Templates',
-                          style: Theme.of(context).textTheme.titleMedium,
-                        ),
-                        const SizedBox(height: 12),
-                        _buildTemplatesSection(),
-                        const SizedBox(height: 8),
-                        Center(
-                          child: TextButton(
-                            onPressed: () =>
-                                setState(() => _showTemplates = false),
-                            child: const Text('Or create custom item'),
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                      ] else ...[
-                        // Custom item form
-                        _buildCustomItemForm(),
-                      ],
+                      Text(
+                        'Add Item',
+                        style: Theme.of(context).textTheme.headlineSmall
+                            ?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: textPrimaryColor,
+                            ),
+                      ),
+                      IconButton(
+                        onPressed: () => Navigator.pop(context),
+                        icon: Icon(Icons.close, color: textSecondaryColor),
+                      ),
                     ],
                   ),
                 ),
-              ),
-              // Save button
-              if (!_showTemplates)
-                SafeArea(
-                  child: Padding(
+                const Divider(height: 1),
+                // Content
+                Expanded(
+                  child: SingleChildScrollView(
+                    controller: scrollController,
                     padding: const EdgeInsets.all(16),
-                    child: SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: _saveItem,
-                        style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                        ),
-                        child: const Text('Add Item'),
-                      ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Templates section
+                        if (_showTemplates) ...[
+                          Text(
+                            'Quick Add from Templates',
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
+                          const SizedBox(height: 12),
+                          _buildTemplatesSection(),
+                          const SizedBox(height: 8),
+                          Center(
+                            child: TextButton(
+                              onPressed: () =>
+                                  setState(() => _showTemplates = false),
+                              child: const Text('Or create custom item'),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                        ] else ...[
+                          // Custom item form
+                          _buildCustomItemForm(),
+                        ],
+                      ],
                     ),
                   ),
                 ),
-            ],
-          );
-        },
+                // Save button
+                if (!_showTemplates)
+                  SafeArea(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: _saveItem,
+                          style: ElevatedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                          ),
+                          child: const Text('Add Item'),
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            );
+          },
+        ),
       ),
     );
   }
 
   Widget _buildTemplatesSection() {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final templatesByCategory = Templates.byCategory;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -218,7 +253,11 @@ class _AddItemDialogState extends State<AddItemDialog> {
               padding: const EdgeInsets.symmetric(vertical: 8),
               child: Text(
                 entry.key,
-                style: Theme.of(context).textTheme.labelLarge,
+                style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                  color: isDarkMode
+                      ? AppColors.textSecondary
+                      : AppColors.textSecondaryLight,
+                ),
               ),
             ),
             Wrap(
@@ -229,13 +268,19 @@ class _AddItemDialogState extends State<AddItemDialog> {
                   onTap: () => _selectTemplate(template),
                   borderRadius: BorderRadius.circular(12),
                   child: Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
                     decoration: BoxDecoration(
-                      color: AppColors.surfaceVariant,
+                      color: isDarkMode
+                          ? AppColors.surfaceVariant
+                          : AppColors.surfaceVariantLight,
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
-                        color: AppColors.fromHex(template.color).withValues(alpha: 0.3),
+                        color: AppColors.fromHex(
+                          template.color,
+                        ).withValues(alpha: 0.3),
                       ),
                     ),
                     child: Row(
@@ -249,7 +294,12 @@ class _AddItemDialogState extends State<AddItemDialog> {
                         const SizedBox(width: 6),
                         Text(
                           template.name,
-                          style: Theme.of(context).textTheme.bodySmall,
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(
+                                color: isDarkMode
+                                    ? AppColors.textPrimary
+                                    : AppColors.textPrimaryLight,
+                              ),
                         ),
                       ],
                     ),
@@ -265,6 +315,7 @@ class _AddItemDialogState extends State<AddItemDialog> {
   }
 
   Widget _buildCustomItemForm() {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     return Form(
       key: _formKey,
       child: Column(
@@ -288,7 +339,9 @@ class _AddItemDialogState extends State<AddItemDialog> {
                   child: Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: AppColors.surfaceVariant,
+                      color: isDarkMode
+                          ? AppColors.surfaceVariant
+                          : AppColors.surfaceVariantLight,
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Column(
@@ -301,7 +354,12 @@ class _AddItemDialogState extends State<AddItemDialog> {
                         const SizedBox(height: 8),
                         Text(
                           'Icon',
-                          style: Theme.of(context).textTheme.bodySmall,
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(
+                                color: isDarkMode
+                                    ? AppColors.textSecondary
+                                    : AppColors.textSecondaryLight,
+                              ),
                         ),
                       ],
                     ),
@@ -317,7 +375,9 @@ class _AddItemDialogState extends State<AddItemDialog> {
                   child: Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: AppColors.surfaceVariant,
+                      color: isDarkMode
+                          ? AppColors.surfaceVariant
+                          : AppColors.surfaceVariantLight,
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Column(
@@ -333,7 +393,12 @@ class _AddItemDialogState extends State<AddItemDialog> {
                         const SizedBox(height: 8),
                         Text(
                           'Color',
-                          style: Theme.of(context).textTheme.bodySmall,
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(
+                                color: isDarkMode
+                                    ? AppColors.textSecondary
+                                    : AppColors.textSecondaryLight,
+                              ),
                         ),
                       ],
                     ),
@@ -343,11 +408,17 @@ class _AddItemDialogState extends State<AddItemDialog> {
             ],
           ),
           const SizedBox(height: 24),
-          // Name field
+          // Name field with visible label
+          Text(
+            'Item Name',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 8),
           TextFormField(
             controller: _nameController,
             decoration: const InputDecoration(
-              labelText: 'Item Name',
               hintText: 'e.g., Haircut, Oil Change',
             ),
             textCapitalization: TextCapitalization.words,
@@ -362,11 +433,17 @@ class _AddItemDialogState extends State<AddItemDialog> {
             },
           ),
           const SizedBox(height: 16),
-          // Interval field
+          // Interval field with visible label
+          Text(
+            'Recommended Interval (days)',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 8),
           TextFormField(
             controller: _intervalController,
             decoration: const InputDecoration(
-              labelText: 'Recommended Interval (days)',
               hintText: 'e.g., 30',
               suffixText: 'days',
             ),
@@ -392,11 +469,28 @@ class _AddItemDialogState extends State<AddItemDialog> {
           const SizedBox(height: 24),
           // Notifications toggle
           SwitchListTile(
-            title: const Text('Reminder Notifications'),
-            subtitle: const Text('Get notified when item is almost due'),
+            title: Text(
+              'Reminder Notifications',
+              style: TextStyle(
+                color: isDarkMode
+                    ? AppColors.textPrimary
+                    : AppColors.textPrimaryLight,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            subtitle: Text(
+              'Get notified when item is almost due',
+              style: TextStyle(
+                color: isDarkMode
+                    ? AppColors.textSecondary
+                    : AppColors.textSecondaryLight,
+              ),
+            ),
             value: _notificationsEnabled,
             onChanged: (value) {
-              HapticFeedback.selectionClick();
+              if (context.read<SettingsProvider>().hapticFeedbackEnabled) {
+                HapticService.selectionClick();
+              }
               setState(() => _notificationsEnabled = value);
             },
             contentPadding: EdgeInsets.zero,

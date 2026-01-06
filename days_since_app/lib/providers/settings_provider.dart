@@ -16,6 +16,7 @@ class SettingsProvider extends ChangeNotifier {
   // Setting keys
   static const String _keyNotificationsEnabled = 'notifications_enabled';
   static const String _keyNotificationTime = 'notification_time';
+  static const String _keyNotificationMinute = 'notification_minute';
   static const String _keySortOrder = 'sort_order';
   static const String _keyShowCompletedFirst = 'show_completed_first';
   static const String _keyHapticFeedback = 'haptic_feedback';
@@ -70,17 +71,44 @@ class SettingsProvider extends ChangeNotifier {
     }
   }
 
+  /// Default notification minute (0-59)
+  /// Defaults to 0
+  int get notificationTimeMinute {
+    return _box?.get(_keyNotificationMinute, defaultValue: 0) ?? 0;
+  }
+
+  set notificationTimeMinute(int value) {
+    if (value >= 0 && value <= 59) {
+      _box?.put(_keyNotificationMinute, value);
+      notifyListeners();
+    }
+  }
+
+  /// Get notification time as TimeOfDay
+  TimeOfDay get notificationTime {
+    return TimeOfDay(hour: notificationTimeHour, minute: notificationTimeMinute);
+  }
+
+  /// Set notification time from TimeOfDay
+  set notificationTime(TimeOfDay time) {
+    _box?.put(_keyNotificationTime, time.hour);
+    _box?.put(_keyNotificationMinute, time.minute);
+    notifyListeners();
+  }
+
   /// Get formatted notification time string
   String get notificationTimeFormatted {
     final hour = notificationTimeHour;
+    final minute = notificationTimeMinute;
+    final minuteStr = minute.toString().padLeft(2, '0');
     if (hour == 0) {
-      return '12:00 AM';
+      return '12:$minuteStr AM';
     } else if (hour < 12) {
-      return '$hour:00 AM';
+      return '$hour:$minuteStr AM';
     } else if (hour == 12) {
-      return '12:00 PM';
+      return '12:$minuteStr PM';
     } else {
-      return '${hour - 12}:00 PM';
+      return '${hour - 12}:$minuteStr PM';
     }
   }
 
@@ -118,15 +146,17 @@ class SettingsProvider extends ChangeNotifier {
 
   /// Get the current theme mode setting
   AppThemeMode get themeMode {
-    final value = _box?.get(_keyThemeMode, defaultValue: 'dark') ?? 'dark';
+    // Before box is initialized, return system to avoid flash
+    if (_box == null) return AppThemeMode.system;
+    final value = _box?.get(_keyThemeMode, defaultValue: 'system') ?? 'system';
     switch (value) {
       case 'light':
         return AppThemeMode.light;
-      case 'system':
-        return AppThemeMode.system;
       case 'dark':
-      default:
         return AppThemeMode.dark;
+      case 'system':
+      default:
+        return AppThemeMode.system;
     }
   }
 
@@ -239,6 +269,7 @@ class SettingsProvider extends ChangeNotifier {
     return {
       'notificationsEnabled': notificationsEnabled,
       'notificationTimeHour': notificationTimeHour,
+      'notificationTimeMinute': notificationTimeMinute,
       'sortOrder': sortOrder,
       'showCompletedFirst': showCompletedFirst,
       'hapticFeedbackEnabled': hapticFeedbackEnabled,

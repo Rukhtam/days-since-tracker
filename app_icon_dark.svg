@@ -1,0 +1,40 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <!-- iOS 18 Dark Mode Variant -->
+  <!-- Background Circle - Deeper dark for OLED -->
+  <circle cx="512" cy="512" r="448" fill="#0A0A0A"/>
+
+  <!-- Progress Ring Background (inactive) -->
+  <circle
+    cx="512"
+    cy="512"
+    r="324"
+    fill="none"
+    stroke="#1F1F1F"
+    stroke-width="72"
+    stroke-linecap="round"
+  />
+
+  <!-- Progress Ring Active - Brighter green for dark mode contrast -->
+  <circle
+    cx="512"
+    cy="512"
+    r="324"
+    fill="none"
+    stroke="#5FD068"
+    stroke-width="72"
+    stroke-linecap="round"
+    stroke-dasharray="1527 509"
+    transform="rotate(-90 512 512)"
+  />
+
+  <!-- Number "7" -->
+  <text
+    x="512"
+    y="630"
+    font-family="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+    font-size="420"
+    font-weight="700"
+    fill="#FFFFFF"
+    text-anchor="middle"
+  >7</text>
+</svg>

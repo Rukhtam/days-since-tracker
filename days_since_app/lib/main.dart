@@ -6,6 +6,7 @@ import 'constants/app_theme.dart';
 import 'providers/tracked_items_provider.dart';
 import 'providers/settings_provider.dart';
 import 'screens/home_screen.dart';
+import 'services/haptic_service.dart';
 import 'services/hive_service.dart';
 import 'services/notification_service.dart';
 
@@ -19,10 +20,16 @@ void main() async {
     DeviceOrientation.portraitDown,
   ]);
 
+  // Enable edge-to-edge display
+  SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+
   // Note: System UI overlay style will be set dynamically based on theme
 
   // Initialize Hive for local storage
   await HiveService.initialize();
+
+  // Initialize haptic service
+  await HapticService.initialize();
 
   // Initialize notification service
   await NotificationService().initialize(
@@ -55,9 +62,11 @@ class DaysSinceApp extends StatelessWidget {
         ChangeNotifierProxyProvider<SettingsProvider, TrackedItemsProvider>(
           create: (_) => TrackedItemsProvider()..loadItems(),
           update: (_, settings, previous) {
-            // Sync sort order from settings to items provider
+            // Sync settings to items provider
             if (previous != null && settings.isInitialized) {
               previous.sortOrder = settings.sortOrder;
+              previous.notificationHour = settings.notificationTimeHour;
+              previous.notificationMinute = settings.notificationTimeMinute;
             }
             return previous ?? (TrackedItemsProvider()..loadItems());
           },
@@ -65,7 +74,7 @@ class DaysSinceApp extends StatelessWidget {
       ],
       child: Consumer<SettingsProvider>(
         builder: (context, settings, _) {
-          // Update system UI overlay style based on theme
+          // Determine theme - uses system theme as default before settings load
           final isDark = settings.flutterThemeMode == ThemeMode.dark ||
               (settings.flutterThemeMode == ThemeMode.system &&
                   MediaQuery.platformBrightnessOf(context) == Brightness.dark);
@@ -75,20 +84,35 @@ class DaysSinceApp extends StatelessWidget {
               statusBarColor: Colors.transparent,
               statusBarIconBrightness:
                   isDark ? Brightness.light : Brightness.dark,
-              systemNavigationBarColor:
-                  isDark ? const Color(0xFF121212) : const Color(0xFFFAFAFA),
+              systemNavigationBarColor: Colors.transparent,
               systemNavigationBarIconBrightness:
                   isDark ? Brightness.light : Brightness.dark,
+              systemNavigationBarContrastEnforced: false,
             ),
           );
 
           return MaterialApp(
             title: 'Days Since',
             debugShowCheckedModeBanner: false,
-            theme: AppTheme.lightTheme,
-            darkTheme: AppTheme.darkTheme,
+            theme: AppTheme.lightTheme.copyWith(
+              scaffoldBackgroundColor: const Color(0xFFF2F5F9),
+            ),
+            darkTheme: AppTheme.darkTheme.copyWith(
+              scaffoldBackgroundColor: const Color(0xFF0F172A),
+            ),
             themeMode: settings.flutterThemeMode,
-            home: const AppInitializer(child: HomeScreen()),
+            // Wrap the entire app in AnnotatedRegion for system UI control
+            home: AnnotatedRegion<SystemUiOverlayStyle>(
+              value: SystemUiOverlayStyle(
+                statusBarColor: Colors.transparent,
+                statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
+                systemNavigationBarColor: Colors.transparent,
+                systemNavigationBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
+                systemNavigationBarContrastEnforced: false,
+                systemNavigationBarDividerColor: Colors.transparent,
+              ),
+              child: const AppInitializer(child: HomeScreen()),
+            ),
           );
         },
       ),
@@ -133,7 +157,11 @@ class _AppInitializerState extends State<AppInitializer> {
     // Schedule notifications for all items if enabled
     if (settings.notificationsEnabled) {
       final items = itemsProvider.items;
-      await NotificationService().updateAllNotifications(items);
+      await NotificationService().updateAllNotifications(
+        items,
+        notificationHour: settings.notificationTimeHour,
+        notificationMinute: settings.notificationTimeMinute,
+      );
     }
   }
 

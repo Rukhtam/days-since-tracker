@@ -11,9 +11,29 @@ class TrackedItemsProvider extends ChangeNotifier {
   bool _isLoading = false;
   String? _error;
   String _sortOrder = 'status';
+  int _notificationHour = 9; // Default to 9 AM
+  int _notificationMinute = 0; // Default to :00
 
   final Uuid _uuid = const Uuid();
   final NotificationService _notificationService = NotificationService();
+
+  /// Get or set the notification hour (0-23)
+  int get notificationHour => _notificationHour;
+
+  set notificationHour(int value) {
+    if (value >= 0 && value <= 23 && _notificationHour != value) {
+      _notificationHour = value;
+    }
+  }
+
+  /// Get or set the notification minute (0-59)
+  int get notificationMinute => _notificationMinute;
+
+  set notificationMinute(int value) {
+    if (value >= 0 && value <= 59 && _notificationMinute != value) {
+      _notificationMinute = value;
+    }
+  }
 
   /// Get or set the current sort order
   String get sortOrder => _sortOrder;
@@ -148,7 +168,11 @@ class TrackedItemsProvider extends ChangeNotifier {
 
       // Schedule notification for the new item
       if (item.notificationsEnabled) {
-        _notificationService.scheduleItemNotification(item);
+        _notificationService.scheduleItemNotification(
+          item,
+          notificationHour: _notificationHour,
+          notificationMinute: _notificationMinute,
+        );
       }
 
       notifyListeners();
@@ -169,7 +193,11 @@ class TrackedItemsProvider extends ChangeNotifier {
         _items[index] = updatedItem;
 
         // Update notification schedule for this item
-        _notificationService.scheduleItemNotification(updatedItem);
+        _notificationService.scheduleItemNotification(
+          updatedItem,
+          notificationHour: _notificationHour,
+          notificationMinute: _notificationMinute,
+        );
 
         notifyListeners();
       }
@@ -209,7 +237,11 @@ class TrackedItemsProvider extends ChangeNotifier {
         _items[index] = updatedItem;
 
         // Reschedule notification for the reset item
-        _notificationService.scheduleItemNotification(updatedItem);
+        _notificationService.scheduleItemNotification(
+          updatedItem,
+          notificationHour: _notificationHour,
+          notificationMinute: _notificationMinute,
+        );
 
         notifyListeners();
         return true;

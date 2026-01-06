@@ -1,8 +1,9 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:timezone/timezone.dart' as tz;
-import 'package:timezone/data/latest_all.dart' as tz;
+import 'package:timezone/data/latest_all.dart' as tz_data;
 import '../models/tracked_item.dart';
 
 /// Service class that handles all local notification operations.
@@ -40,8 +41,11 @@ class NotificationService {
     if (_isInitialized) return true;
 
     try {
-      // Initialize timezone database
-      tz.initializeTimeZones();
+      // Initialize timezone database and set local timezone
+      tz_data.initializeTimeZones();
+      final String timeZoneName = await FlutterTimezone.getLocalTimezone();
+      tz.setLocalLocation(tz.getLocation(timeZoneName));
+      debugPrint('NotificationService: Timezone set to $timeZoneName');
 
       // Android initialization settings
       const androidSettings = AndroidInitializationSettings(_androidIcon);
@@ -62,8 +66,10 @@ class NotificationService {
       // Initialize the plugin
       final success = await _notifications.initialize(
         initSettings,
-        onDidReceiveNotificationResponse: onNotificationTap ?? _onNotificationTap,
-        onDidReceiveBackgroundNotificationResponse: _onBackgroundNotificationTap,
+        onDidReceiveNotificationResponse:
+            onNotificationTap ?? _onNotificationTap,
+        onDidReceiveBackgroundNotificationResponse:
+            _onBackgroundNotificationTap,
       );
 
       _isInitialized = success ?? false;
@@ -85,27 +91,33 @@ class NotificationService {
   /// Returns true if permissions were granted.
   Future<bool> requestPermissions() async {
     if (!_isInitialized) {
-      debugPrint('NotificationService: Not initialized, cannot request permissions');
+      debugPrint(
+        'NotificationService: Not initialized, cannot request permissions',
+      );
       return false;
     }
 
     try {
       if (Platform.isAndroid) {
         // For Android 13+ (API 33+), request POST_NOTIFICATIONS permission
-        final androidPlugin =
-            _notifications.resolvePlatformSpecificImplementation<
-                AndroidFlutterLocalNotificationsPlugin>();
+        final androidPlugin = _notifications
+            .resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin
+            >();
 
         if (androidPlugin != null) {
           final granted = await androidPlugin.requestNotificationsPermission();
-          debugPrint('NotificationService: Android permission granted: $granted');
+          debugPrint(
+            'NotificationService: Android permission granted: $granted',
+          );
           return granted ?? false;
         }
         return true; // For older Android versions, permissions granted by default
       } else if (Platform.isIOS) {
-        final iosPlugin =
-            _notifications.resolvePlatformSpecificImplementation<
-                IOSFlutterLocalNotificationsPlugin>();
+        final iosPlugin = _notifications
+            .resolvePlatformSpecificImplementation<
+              IOSFlutterLocalNotificationsPlugin
+            >();
 
         if (iosPlugin != null) {
           final granted = await iosPlugin.requestPermissions(
@@ -131,9 +143,10 @@ class NotificationService {
 
     try {
       if (Platform.isAndroid) {
-        final androidPlugin =
-            _notifications.resolvePlatformSpecificImplementation<
-                AndroidFlutterLocalNotificationsPlugin>();
+        final androidPlugin = _notifications
+            .resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin
+            >();
 
         if (androidPlugin != null) {
           final enabled = await androidPlugin.areNotificationsEnabled();
@@ -153,15 +166,19 @@ class NotificationService {
   }
 
   /// Schedule a notification for a tracked item when it reaches 90% of interval.
-  /// The notification is scheduled for 9:00 AM on the target date.
-  Future<bool> scheduleItemNotification(TrackedItem item) async {
+  /// The notification is scheduled at the specified hour and minute on the target date.
+  /// [notificationHour] should be 0-23 (defaults to 9 for 9:00 AM)
+  /// [notificationMinute] should be 0-59 (defaults to 0)
+  Future<bool> scheduleItemNotification(
+    TrackedItem item, {
+    int notificationHour = 9,
+    int notificationMinute = 0,
+  }) async {
     if (!_isInitialized) {
-      debugPrint('NotificationService: Not initialized, cannot schedule');
       return false;
     }
 
     if (!item.notificationsEnabled) {
-      debugPrint('NotificationService: Notifications disabled for ${item.name}');
       // Cancel any existing notification for this item
       await cancelItemNotification(item.id);
       return true;
@@ -169,13 +186,17 @@ class NotificationService {
 
     try {
       // Calculate when to send the notification (at 90% of interval)
-      final notificationDate = _calculateNotificationDate(item);
+      final notificationDate = _calculateNotificationDate(
+        item,
+        notificationHour: notificationHour,
+        notificationMinute: notificationMinute,
+      );
 
       if (notificationDate == null) {
-        debugPrint('NotificationService: Notification date is in the past for ${item.name}');
-        // If already past 90%, check if we should show immediately
-        if (item.percentageElapsed >= 90 && item.percentageElapsed <= 100) {
-          // Show notification now if in the warning zone
+        // If already at 90% or more, show notification immediately
+        // This handles both warning (90-100%) and overdue (>100%) states
+        if (item.percentageElapsed >= 90) {
+          // Show notification now if in the warning or overdue zone
           return await _showImmediateNotification(item);
         }
         return true;
@@ -226,10 +247,8 @@ class NotificationService {
         matchDateTimeComponents: null, // One-time notification
       );
 
-      debugPrint('NotificationService: Scheduled notification for ${item.name} at $notificationDate');
       return true;
     } catch (e) {
-      debugPrint('NotificationService: Failed to schedule notification - $e');
       return false;
     }
   }
@@ -240,9 +259,8 @@ class NotificationService {
 
     try {
       await _notifications.cancel(_getNotificationId(itemId));
-      debugPrint('NotificationService: Cancelled notification for item $itemId');
     } catch (e) {
-      debugPrint('NotificationService: Failed to cancel notification - $e');
+      // Silently fail
     }
   }
 
@@ -252,21 +270,32 @@ class NotificationService {
 
     try {
       await _notifications.cancelAll();
-      debugPrint('NotificationService: Cancelled all notifications');
     } catch (e) {
-      debugPrint('NotificationService: Failed to cancel all notifications - $e');
+      // Silently fail
     }
   }
 
   /// Update notifications for all tracked items.
   /// Call this when app resumes or items change.
-  Future<void> updateAllNotifications(List<TrackedItem> items) async {
+  /// [notificationHour] should be 0-23 (defaults to 9 for 9:00 AM)
+  /// [notificationMinute] should be 0-59 (defaults to 0)
+  Future<void> updateAllNotifications(
+    List<TrackedItem> items, {
+    int notificationHour = 9,
+    int notificationMinute = 0,
+  }) async {
     if (!_isInitialized) return;
 
     for (final item in items) {
-      await scheduleItemNotification(item);
+      await scheduleItemNotification(
+        item,
+        notificationHour: notificationHour,
+        notificationMinute: notificationMinute,
+      );
     }
-    debugPrint('NotificationService: Updated notifications for ${items.length} items');
+    debugPrint(
+      'NotificationService: Updated notifications for ${items.length} items at $notificationHour:${notificationMinute.toString().padLeft(2, '0')}',
+    );
   }
 
   /// Show an immediate notification for an item that's already due.
@@ -307,40 +336,52 @@ class NotificationService {
         payload: item.id,
       );
 
-      debugPrint('NotificationService: Showed immediate notification for ${item.name}');
+      debugPrint(
+        'NotificationService: Showed immediate notification for ${item.name}',
+      );
       return true;
     } catch (e) {
-      debugPrint('NotificationService: Failed to show immediate notification - $e');
+      debugPrint(
+        'NotificationService: Failed to show immediate notification - $e',
+      );
       return false;
     }
   }
 
   /// Calculate the date/time when the notification should be sent.
-  /// Returns null if the date is in the past.
-  tz.TZDateTime? _calculateNotificationDate(TrackedItem item) {
+  /// Returns null only if today's scheduled time has already passed.
+  /// [notificationHour] should be 0-23 (defaults to 9 for 9:00 AM)
+  /// [notificationMinute] should be 0-59 (defaults to 0)
+  tz.TZDateTime? _calculateNotificationDate(
+    TrackedItem item, {
+    int notificationHour = 9,
+    int notificationMinute = 0,
+  }) {
     // Calculate when 90% of interval is reached
-    final daysUntil90Percent = (item.recommendedIntervalDays * 0.9).floor() - item.daysSinceReset;
+    final daysUntil90Percent =
+        (item.recommendedIntervalDays * 0.9).floor() - item.daysSinceReset;
 
-    if (daysUntil90Percent < 0) {
-      // Already past 90%
-      return null;
-    }
-
-    // Schedule for 9:00 AM on the target day
     final now = tz.TZDateTime.now(tz.local);
-    var notificationDate = tz.TZDateTime(
+
+    // If we're already past 90%, schedule for today's time (if it hasn't passed yet)
+    // Otherwise, schedule for the calculated future day
+    final daysToAdd = daysUntil90Percent < 0 ? 0 : daysUntil90Percent;
+
+    // Schedule for the user's preferred time on the target day
+    final notificationDate = tz.TZDateTime(
       tz.local,
       now.year,
       now.month,
-      now.day + daysUntil90Percent,
-      9, // 9:00 AM
-      0,
+      now.day + daysToAdd,
+      notificationHour, // User's preferred hour
+      notificationMinute, // User's preferred minute
       0,
     );
 
-    // If the calculated time is in the past, add a day
+    // Only return null if today's scheduled time has already passed
+    // This is the only case where we should show an immediate notification
     if (notificationDate.isBefore(now)) {
-      notificationDate = notificationDate.add(const Duration(days: 1));
+      return null;
     }
 
     return notificationDate;
@@ -367,19 +408,22 @@ class NotificationService {
   String _getNotificationBody(TrackedItem item) {
     final daysSince = item.daysSinceReset;
     final daysUntilDue = item.daysUntilDue;
+    final daysSinceLabel = daysSince == 1 ? 'day' : 'days';
 
     if (daysUntilDue < 0) {
-      return 'It has been $daysSince days. This is ${-daysUntilDue} days overdue!';
+      final overdueCount = -daysUntilDue;
+      final overdueLabel = overdueCount == 1 ? 'day' : 'days';
+      return 'It has been $daysSince $daysSinceLabel. This is $overdueCount $overdueLabel overdue!';
     } else if (daysUntilDue == 0) {
-      return 'It has been $daysSince days. Time to take action!';
+      return 'It has been $daysSince $daysSinceLabel. Time to take action!';
     } else {
-      return 'It has been $daysSince days. Due in $daysUntilDue days.';
+      final dueLabel = daysUntilDue == 1 ? 'day' : 'days';
+      return 'It has been $daysSince $daysSinceLabel. Due in $daysUntilDue $dueLabel.';
     }
   }
 
   /// Default handler for notification taps.
   static void _onNotificationTap(NotificationResponse response) {
-    debugPrint('NotificationService: Notification tapped - ${response.payload}');
     // The payload contains the item ID
     // Navigation to the item will be handled by the app
   }
@@ -387,7 +431,7 @@ class NotificationService {
   /// Handler for background notification taps.
   @pragma('vm:entry-point')
   static void _onBackgroundNotificationTap(NotificationResponse response) {
-    debugPrint('NotificationService: Background notification tapped - ${response.payload}');
+    // Handle background notification tap
   }
 
   /// Get pending notification requests (for debugging).

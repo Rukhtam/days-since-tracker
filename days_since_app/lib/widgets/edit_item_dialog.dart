@@ -4,7 +4,9 @@ import 'package:provider/provider.dart';
 
 import '../constants/app_colors.dart';
 import '../models/tracked_item.dart';
+import '../providers/settings_provider.dart';
 import '../providers/tracked_items_provider.dart';
+import '../services/haptic_service.dart';
 import '../utils/icon_utils.dart';
 import 'icon_picker.dart';
 import 'color_picker.dart';
@@ -13,10 +15,7 @@ import 'color_picker.dart';
 class EditItemDialog extends StatefulWidget {
   final TrackedItem item;
 
-  const EditItemDialog({
-    super.key,
-    required this.item,
-  });
+  const EditItemDialog({super.key, required this.item});
 
   @override
   State<EditItemDialog> createState() => _EditItemDialogState();
@@ -55,7 +54,9 @@ class _EditItemDialogState extends State<EditItemDialog> {
   Future<void> _saveItem() async {
     if (!_formKey.currentState!.validate()) return;
 
-    HapticFeedback.mediumImpact();
+    if (context.read<SettingsProvider>().hapticFeedbackEnabled) {
+      HapticService.mediumImpact();
+    }
 
     final updatedItem = widget.item.copyWith(
       name: _nameController.text.trim(),
@@ -87,7 +88,9 @@ class _EditItemDialogState extends State<EditItemDialog> {
   }
 
   void _showIconPicker() {
-    HapticFeedback.selectionClick();
+    if (context.read<SettingsProvider>().hapticFeedbackEnabled) {
+      HapticService.selectionClick();
+    }
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -103,7 +106,9 @@ class _EditItemDialogState extends State<EditItemDialog> {
   }
 
   void _showColorPicker() {
-    HapticFeedback.selectionClick();
+    if (context.read<SettingsProvider>().hapticFeedbackEnabled) {
+      HapticService.selectionClick();
+    }
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -118,7 +123,10 @@ class _EditItemDialogState extends State<EditItemDialog> {
   }
 
   Future<void> _pickDate() async {
-    HapticFeedback.selectionClick();
+    if (context.read<SettingsProvider>().hapticFeedbackEnabled) {
+      HapticService.selectionClick();
+    }
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final picked = await showDatePicker(
       context: context,
       initialDate: _lastResetDate,
@@ -127,12 +135,19 @@ class _EditItemDialogState extends State<EditItemDialog> {
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
-            colorScheme: const ColorScheme.dark(
-              primary: AppColors.primary,
-              onPrimary: AppColors.textPrimary,
-              surface: AppColors.surface,
-              onSurface: AppColors.textPrimary,
-            ),
+            colorScheme: isDarkMode
+                ? const ColorScheme.dark(
+                    primary: AppColors.primary,
+                    onPrimary: AppColors.textPrimary,
+                    surface: AppColors.surface,
+                    onSurface: AppColors.textPrimary,
+                  )
+                : const ColorScheme.light(
+                    primary: AppColors.primary,
+                    onPrimary: Colors.white,
+                    surface: AppColors.surfaceLight,
+                    onSurface: AppColors.textPrimaryLight,
+                  ),
           ),
           child: child!,
         );
@@ -146,253 +161,320 @@ class _EditItemDialogState extends State<EditItemDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
+    // Theme-aware colors
+    final backgroundColor = isDarkMode
+        ? AppColors.surface
+        : AppColors.surfaceLight;
+    final surfaceVariantColor = isDarkMode
+        ? AppColors.surfaceVariant
+        : AppColors.surfaceVariantLight;
+    final dividerColor = isDarkMode
+        ? AppColors.divider
+        : AppColors.dividerLight;
+    final textPrimaryColor = isDarkMode
+        ? AppColors.textPrimary
+        : AppColors.textPrimaryLight;
+    final textSecondaryColor = isDarkMode
+        ? AppColors.textSecondary
+        : AppColors.textSecondaryLight;
+    final textTertiaryColor = isDarkMode
+        ? AppColors.textTertiary
+        : AppColors.textTertiaryLight;
+
     return Container(
-      decoration: const BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      child: DraggableScrollableSheet(
-        initialChildSize: 0.85,
-        minChildSize: 0.5,
-        maxChildSize: 0.95,
-        expand: false,
-        builder: (context, scrollController) {
-          return Column(
-            children: [
-              // Handle bar
-              Container(
-                margin: const EdgeInsets.only(top: 12),
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: AppColors.divider,
-                  borderRadius: BorderRadius.circular(2),
+      child: SafeArea(
+        top: false,
+        child: DraggableScrollableSheet(
+          initialChildSize: 0.85,
+          minChildSize: 0.5,
+          maxChildSize: 0.95,
+          expand: false,
+          builder: (context, scrollController) {
+            return Column(
+              children: [
+                // Handle bar
+                Container(
+                  margin: const EdgeInsets.only(top: 12),
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: dividerColor,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
                 ),
-              ),
-              // Header
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Edit Item',
-                      style: Theme.of(context).textTheme.headlineSmall,
-                    ),
-                    IconButton(
-                      onPressed: () => Navigator.pop(context),
-                      icon: const Icon(Icons.close),
-                    ),
-                  ],
+                // Header
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Edit Item',
+                        style: Theme.of(context).textTheme.headlineSmall
+                            ?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: textPrimaryColor,
+                            ),
+                      ),
+                      IconButton(
+                        onPressed: () => Navigator.pop(context),
+                        icon: Icon(Icons.close, color: textSecondaryColor),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              // Content
-              Expanded(
-                child: SingleChildScrollView(
-                  controller: scrollController,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Form(
-                    key: _formKey,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Icon and color pickers row
-                        Row(
-                          children: [
-                            // Icon picker
-                            Expanded(
-                              child: InkWell(
-                                onTap: _showIconPicker,
-                                borderRadius: BorderRadius.circular(12),
-                                child: Container(
-                                  padding: const EdgeInsets.all(16),
-                                  decoration: BoxDecoration(
-                                    color: AppColors.surfaceVariant,
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: Column(
-                                    children: [
-                                      Icon(
-                                        IconUtils.getIconData(_selectedIcon),
-                                        size: 32,
-                                        color: AppColors.fromHex(_selectedColor),
-                                      ),
-                                      const SizedBox(height: 8),
-                                      Text(
-                                        'Icon',
-                                        style:
-                                            Theme.of(context).textTheme.bodySmall,
-                                      ),
-                                    ],
+                Divider(height: 1, color: dividerColor),
+                // Content
+                Expanded(
+                  child: SingleChildScrollView(
+                    controller: scrollController,
+                    padding: const EdgeInsets.all(16),
+                    child: Form(
+                      key: _formKey,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Icon and color pickers row
+                          Row(
+                            children: [
+                              // Icon picker
+                              Expanded(
+                                child: InkWell(
+                                  onTap: _showIconPicker,
+                                  borderRadius: BorderRadius.circular(12),
+                                  child: Container(
+                                    padding: const EdgeInsets.all(16),
+                                    decoration: BoxDecoration(
+                                      color: surfaceVariantColor,
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Column(
+                                      children: [
+                                        Icon(
+                                          IconUtils.getIconData(_selectedIcon),
+                                          size: 32,
+                                          color: AppColors.fromHex(
+                                            _selectedColor,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 8),
+                                        Text(
+                                          'Icon',
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .bodySmall
+                                              ?.copyWith(
+                                                color: textSecondaryColor,
+                                              ),
+                                        ),
+                                      ],
+                                    ),
                                   ),
                                 ),
                               ),
-                            ),
-                            const SizedBox(width: 12),
-                            // Color picker
-                            Expanded(
-                              child: InkWell(
-                                onTap: _showColorPicker,
-                                borderRadius: BorderRadius.circular(12),
-                                child: Container(
-                                  padding: const EdgeInsets.all(16),
-                                  decoration: BoxDecoration(
-                                    color: AppColors.surfaceVariant,
-                                    borderRadius: BorderRadius.circular(12),
+                              const SizedBox(width: 12),
+                              // Color picker
+                              Expanded(
+                                child: InkWell(
+                                  onTap: _showColorPicker,
+                                  borderRadius: BorderRadius.circular(12),
+                                  child: Container(
+                                    padding: const EdgeInsets.all(16),
+                                    decoration: BoxDecoration(
+                                      color: surfaceVariantColor,
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Column(
+                                      children: [
+                                        Container(
+                                          width: 32,
+                                          height: 32,
+                                          decoration: BoxDecoration(
+                                            color: AppColors.fromHex(
+                                              _selectedColor,
+                                            ),
+                                            shape: BoxShape.circle,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 8),
+                                        Text(
+                                          'Color',
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .bodySmall
+                                              ?.copyWith(
+                                                color: textSecondaryColor,
+                                              ),
+                                        ),
+                                      ],
+                                    ),
                                   ),
-                                  child: Column(
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 24),
+                          // Name field with visible label
+                          Text(
+                            'Item Name',
+                            style: Theme.of(context).textTheme.bodyMedium
+                                ?.copyWith(color: textSecondaryColor),
+                          ),
+                          const SizedBox(height: 8),
+                          TextFormField(
+                            controller: _nameController,
+                            decoration: const InputDecoration(
+                              hintText: 'e.g., Haircut, Oil Change',
+                            ),
+                            textCapitalization: TextCapitalization.words,
+                            validator: (value) {
+                              if (value == null || value.trim().isEmpty) {
+                                return 'Please enter a name';
+                              }
+                              if (value.trim().length > 50) {
+                                return 'Name must be less than 50 characters';
+                              }
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 16),
+                          // Interval field with visible label
+                          Text(
+                            'Recommended Interval (days)',
+                            style: Theme.of(context).textTheme.bodyMedium
+                                ?.copyWith(color: textSecondaryColor),
+                          ),
+                          const SizedBox(height: 8),
+                          TextFormField(
+                            controller: _intervalController,
+                            decoration: const InputDecoration(
+                              hintText: 'e.g., 30',
+                              suffixText: 'days',
+                            ),
+                            keyboardType: TextInputType.number,
+                            inputFormatters: [
+                              FilteringTextInputFormatter.digitsOnly,
+                              LengthLimitingTextInputFormatter(4),
+                            ],
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Please enter an interval';
+                              }
+                              final interval = int.tryParse(value);
+                              if (interval == null || interval <= 0) {
+                                return 'Interval must be greater than 0';
+                              }
+                              if (interval > 3650) {
+                                return 'Interval must be less than 10 years';
+                              }
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 24),
+                          // Last reset date
+                          InkWell(
+                            onTap: _pickDate,
+                            borderRadius: BorderRadius.circular(12),
+                            child: Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: surfaceVariantColor,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.calendar_today,
+                                    color: textSecondaryColor,
+                                  ),
+                                  const SizedBox(width: 16),
+                                  Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
-                                      Container(
-                                        width: 32,
-                                        height: 32,
-                                        decoration: BoxDecoration(
-                                          color:
-                                              AppColors.fromHex(_selectedColor),
-                                          shape: BoxShape.circle,
+                                      Text(
+                                        'Last Reset Date',
+                                        style: TextStyle(
+                                          color: textSecondaryColor,
+                                          fontSize: 12,
                                         ),
                                       ),
-                                      const SizedBox(height: 8),
+                                      const SizedBox(height: 4),
                                       Text(
-                                        'Color',
-                                        style:
-                                            Theme.of(context).textTheme.bodySmall,
+                                        _formatDate(_lastResetDate),
+                                        style: TextStyle(
+                                          color: textPrimaryColor,
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w500,
+                                        ),
                                       ),
                                     ],
                                   ),
-                                ),
+                                  const Spacer(),
+                                  Icon(
+                                    Icons.edit,
+                                    color: textTertiaryColor,
+                                    size: 20,
+                                  ),
+                                ],
                               ),
                             ),
-                          ],
-                        ),
-                        const SizedBox(height: 24),
-                        // Name field
-                        TextFormField(
-                          controller: _nameController,
-                          decoration: const InputDecoration(
-                            labelText: 'Item Name',
-                            hintText: 'e.g., Haircut, Oil Change',
                           ),
-                          textCapitalization: TextCapitalization.words,
-                          validator: (value) {
-                            if (value == null || value.trim().isEmpty) {
-                              return 'Please enter a name';
-                            }
-                            if (value.trim().length > 50) {
-                              return 'Name must be less than 50 characters';
-                            }
-                            return null;
-                          },
-                        ),
-                        const SizedBox(height: 16),
-                        // Interval field
-                        TextFormField(
-                          controller: _intervalController,
-                          decoration: const InputDecoration(
-                            labelText: 'Recommended Interval (days)',
-                            hintText: 'e.g., 30',
-                            suffixText: 'days',
-                          ),
-                          keyboardType: TextInputType.number,
-                          inputFormatters: [
-                            FilteringTextInputFormatter.digitsOnly,
-                            LengthLimitingTextInputFormatter(4),
-                          ],
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return 'Please enter an interval';
-                            }
-                            final interval = int.tryParse(value);
-                            if (interval == null || interval <= 0) {
-                              return 'Interval must be greater than 0';
-                            }
-                            if (interval > 3650) {
-                              return 'Interval must be less than 10 years';
-                            }
-                            return null;
-                          },
-                        ),
-                        const SizedBox(height: 24),
-                        // Last reset date
-                        InkWell(
-                          onTap: _pickDate,
-                          borderRadius: BorderRadius.circular(12),
-                          child: Container(
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: AppColors.surfaceVariant,
-                              borderRadius: BorderRadius.circular(12),
+                          const SizedBox(height: 24),
+                          // Notifications toggle
+                          SwitchListTile(
+                            title: Text(
+                              'Reminder Notifications',
+                              style: TextStyle(
+                                color: textPrimaryColor,
+                                fontWeight: FontWeight.w500,
+                              ),
                             ),
-                            child: Row(
-                              children: [
-                                const Icon(
-                                  Icons.calendar_today,
-                                  color: AppColors.textSecondary,
-                                ),
-                                const SizedBox(width: 16),
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'Last Reset Date',
-                                      style:
-                                          Theme.of(context).textTheme.bodySmall,
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      _formatDate(_lastResetDate),
-                                      style:
-                                          Theme.of(context).textTheme.titleMedium,
-                                    ),
-                                  ],
-                                ),
-                                const Spacer(),
-                                const Icon(
-                                  Icons.edit,
-                                  color: AppColors.textTertiary,
-                                  size: 20,
-                                ),
-                              ],
+                            subtitle: Text(
+                              'Get notified when item is almost due',
+                              style: TextStyle(color: textSecondaryColor),
                             ),
+                            value: _notificationsEnabled,
+                            onChanged: (value) {
+                              if (context.read<SettingsProvider>().hapticFeedbackEnabled) {
+                                HapticService.selectionClick();
+                              }
+                              setState(() => _notificationsEnabled = value);
+                            },
+                            contentPadding: EdgeInsets.zero,
                           ),
-                        ),
-                        const SizedBox(height: 24),
-                        // Notifications toggle
-                        SwitchListTile(
-                          title: const Text('Reminder Notifications'),
-                          subtitle:
-                              const Text('Get notified when item is almost due'),
-                          value: _notificationsEnabled,
-                          onChanged: (value) {
-                            HapticFeedback.selectionClick();
-                            setState(() => _notificationsEnabled = value);
-                          },
-                          contentPadding: EdgeInsets.zero,
-                        ),
-                        const SizedBox(height: 24),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              // Save button
-              SafeArea(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: _saveItem,
-                      style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
+                          const SizedBox(height: 24),
+                        ],
                       ),
-                      child: const Text('Save Changes'),
                     ),
                   ),
                 ),
-              ),
-            ],
-          );
-        },
+                // Save button
+                SafeArea(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: _saveItem,
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                        ),
+                        child: const Text('Save Changes'),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
       ),
     );
   }
@@ -410,7 +492,7 @@ class _EditItemDialogState extends State<EditItemDialog> {
       'Sep',
       'Oct',
       'Nov',
-      'Dec'
+      'Dec',
     ];
     return '${months[date.month - 1]} ${date.day}, ${date.year}';
   }
