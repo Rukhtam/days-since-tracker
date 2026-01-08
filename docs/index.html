@@ -716,7 +716,8 @@
             }
 
             .hero-section {
-                padding: 60px 16px;
+                padding: 60px 16px 80px 16px;
+                min-height: 110vh;
             }
 
             h1 {
@@ -742,13 +743,14 @@
 
             /* Fix floating cards on mobile */
             .hero-visual {
-                height: 450px;
+                height: 480px;
                 width: 100%;
                 position: relative;
                 overflow: visible;
                 display: flex;
-                align-items: center;
+                align-items: flex-start;
                 justify-content: center;
+                margin-top: 40px;
             }
 
             .app-card {
@@ -761,19 +763,19 @@
             }
 
             .card-1 {
-                top: 40px;
+                top: 20px;
                 transform: translateX(-50%) rotate(-2deg);
                 animation: float-card-mobile-1 6s ease-in-out infinite;
             }
 
             .card-2 {
-                top: 170px;
+                top: 160px;
                 transform: translateX(-50%) rotate(1deg) scale(0.95);
                 animation: float-card-mobile-2 7s ease-in-out infinite;
             }
 
             .card-3 {
-                top: 290px;
+                top: 300px;
                 transform: translateX(-50%) rotate(-1deg) scale(0.9);
                 animation: float-card-mobile-3 8s ease-in-out infinite;
             }
