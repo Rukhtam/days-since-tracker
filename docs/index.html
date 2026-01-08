@@ -2,10 +2,1093 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta http-equiv="refresh" content="0; url=privacy-policy.html">
-    <title>Days Since Tracker</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Days Since - Track Everything That Matters</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-dark: #0F172A;
+            --bg-dark-lighter: #1E293B;
+            --card-white: #ffffff;
+            --text-dark: #1e293b;
+            --text-sub: #64748b;
+            --text-light: #94a3b8;
+            --accent-green: #4CAF50;
+            --accent-yellow: #FFC107;
+            --accent-red: #F44336;
+            --accent-purple: #8b5cf6;
+            --accent-blue: #6366f1;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: var(--bg-dark);
+            color: white;
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* ===== HERO SECTION ===== */
+        .hero-section {
+            min-height: 100vh;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            padding: 0 80px;
+        }
+
+        /* Background Effects */
+        .glow-orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(100px);
+            opacity: 0.4;
+            z-index: 1;
+            animation: float 15s ease-in-out infinite;
+        }
+
+        .orb-1 {
+            width: 500px;
+            height: 500px;
+            background: var(--accent-blue);
+            top: -150px;
+            right: -100px;
+        }
+
+        .orb-2 {
+            width: 400px;
+            height: 400px;
+            background: var(--accent-purple);
+            bottom: -100px;
+            left: -100px;
+            animation-delay: -7s;
+        }
+
+        .orb-3 {
+            width: 350px;
+            height: 350px;
+            background: var(--accent-green);
+            top: 50%;
+            left: 50%;
+            animation-delay: -3s;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            33% { transform: translate(30px, -30px) scale(1.1); }
+            66% { transform: translate(-30px, 30px) scale(0.9); }
+        }
+
+        .hero-content {
+            position: relative;
+            z-index: 10;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+            max-width: 1400px;
+            margin: 0 auto;
+            gap: 80px;
+        }
+
+        .hero-text {
+            flex: 1;
+            max-width: 600px;
+        }
+
+        .badge {
+            display: inline-block;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #e2e8f0;
+            padding: 8px 20px;
+            border-radius: 50px;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 32px;
+            letter-spacing: 1px;
+            animation: slideInLeft 0.8s ease-out;
+        }
+
+        h1 {
+            font-size: 82px;
+            font-weight: 900;
+            line-height: 1.1;
+            margin-bottom: 24px;
+            letter-spacing: -3px;
+            animation: slideInLeft 0.8s ease-out 0.2s backwards;
+        }
+
+        h1 .gradient-text {
+            background: linear-gradient(135deg, var(--accent-green) 0%, var(--accent-blue) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hero-description {
+            font-size: 22px;
+            color: var(--text-light);
+            line-height: 1.6;
+            margin-bottom: 40px;
+            font-weight: 500;
+            animation: slideInLeft 0.8s ease-out 0.4s backwards;
+        }
+
+        .cta-buttons {
+            display: flex;
+            gap: 20px;
+            animation: slideInLeft 0.8s ease-out 0.6s backwards;
+        }
+
+        .btn {
+            padding: 16px 36px;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 700;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            border: none;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent-green) 0%, #45a049 100%);
+            color: white;
+            box-shadow: 0 10px 30px rgba(76, 175, 80, 0.4);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 40px rgba(76, 175, 80, 0.5);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.15);
+            border-color: rgba(255, 255, 255, 0.3);
+        }
+
+        /* Floating App Cards */
+        .hero-visual {
+            flex: 1;
+            position: relative;
+            height: 600px;
+            perspective: 1200px;
+            animation: slideInRight 0.8s ease-out 0.4s backwards;
+        }
+
+        .app-card {
+            background: var(--card-white);
+            border-radius: 28px;
+            padding: 24px;
+            display: flex;
+            align-items: center;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.3);
+            position: absolute;
+            width: 420px;
+            height: 140px;
+            transition: transform 0.3s ease;
+        }
+
+        .app-card:hover {
+            transform: translateY(-5px) !important;
+        }
+
+        .card-1 {
+            top: 100px;
+            right: 0;
+            z-index: 3;
+            transform: rotate(-4deg);
+            animation: float-card-1 6s ease-in-out infinite;
+        }
+
+        .card-2 {
+            top: 280px;
+            right: 60px;
+            z-index: 2;
+            transform: rotate(3deg) scale(0.95);
+            animation: float-card-2 7s ease-in-out infinite;
+        }
+
+        .card-3 {
+            bottom: 60px;
+            right: 20px;
+            z-index: 1;
+            transform: rotate(-2deg) scale(0.9);
+            opacity: 0.85;
+            animation: float-card-3 8s ease-in-out infinite;
+        }
+
+        @keyframes float-card-1 {
+            0%, 100% { transform: rotate(-4deg) translateY(0); }
+            50% { transform: rotate(-4deg) translateY(-15px); }
+        }
+
+        @keyframes float-card-2 {
+            0%, 100% { transform: rotate(3deg) scale(0.95) translateY(0); }
+            50% { transform: rotate(3deg) scale(0.95) translateY(15px); }
+        }
+
+        @keyframes float-card-3 {
+            0%, 100% { transform: rotate(-2deg) scale(0.9) translateY(0); }
+            50% { transform: rotate(-2deg) scale(0.9) translateY(-10px); }
+        }
+
+        @keyframes slideInLeft {
+            from {
+                opacity: 0;
+                transform: translateX(-50px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        @keyframes slideInRight {
+            from {
+                opacity: 0;
+                transform: translateX(50px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        /* Card Components */
+        .progress-ring-container {
+            position: relative;
+            width: 90px;
+            height: 90px;
+            margin-right: 20px;
+            flex-shrink: 0;
+        }
+
+        .ring-bg {
+            fill: none;
+            stroke: #f1f5f9;
+            stroke-width: 9;
+        }
+
+        .ring-progress {
+            fill: none;
+            stroke-width: 9;
+            stroke-linecap: round;
+            transform: rotate(-90deg);
+            transform-origin: 50% 50%;
+            transition: stroke-dashoffset 1s ease;
+        }
+
+        .ring-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+        }
+
+        .days-num {
+            font-size: 28px;
+            font-weight: 800;
+            color: var(--text-dark);
+            line-height: 1;
+        }
+
+        .days-label {
+            font-size: 11px;
+            color: var(--text-sub);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .card-details {
+            flex: 1;
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .icon-square {
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 14px;
+            font-size: 20px;
+        }
+
+        .card-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--text-dark);
+        }
+
+        .card-status {
+            font-size: 14px;
+            font-weight: 600;
+            margin-left: 54px;
+        }
+
+        .refresh-icon {
+            color: #cbd5e1;
+            margin-left: auto;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+        }
+
+        .refresh-icon:hover {
+            transform: rotate(180deg);
+        }
+
+        /* Color Themes */
+        .red-theme .ring-progress { stroke: var(--accent-red); }
+        .red-theme .icon-square { background: #fee2e2; color: var(--accent-red); }
+        .red-theme .card-status { color: var(--accent-red); }
+
+        .yellow-theme .ring-progress { stroke: var(--accent-yellow); }
+        .yellow-theme .icon-square { background: #fef3c7; color: #f59e0b; }
+        .yellow-theme .card-status { color: #f59e0b; }
+
+        .green-theme .ring-progress { stroke: var(--accent-green); }
+        .green-theme .icon-square { background: #dcfce7; color: var(--accent-green); }
+        .green-theme .card-status { color: var(--accent-green); }
+
+        /* ===== FEATURES SECTION ===== */
+        .features-section {
+            padding: 120px 80px;
+            position: relative;
+            background: linear-gradient(180deg, var(--bg-dark) 0%, var(--bg-dark-lighter) 100%);
+        }
+
+        .section-header {
+            text-align: center;
+            margin-bottom: 80px;
+        }
+
+        .section-badge {
+            display: inline-block;
+            background: rgba(76, 175, 80, 0.1);
+            border: 1px solid rgba(76, 175, 80, 0.3);
+            color: var(--accent-green);
+            padding: 8px 20px;
+            border-radius: 50px;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            letter-spacing: 1px;
+        }
+
+        .section-title {
+            font-size: 52px;
+            font-weight: 800;
+            margin-bottom: 20px;
+            letter-spacing: -1px;
+        }
+
+        .section-subtitle {
+            font-size: 20px;
+            color: var(--text-light);
+            max-width: 600px;
+            margin: 0 auto;
+            line-height: 1.6;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 40px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .feature-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 24px;
+            padding: 40px;
+            transition: all 0.3s ease;
+        }
+
+        .feature-card:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(255, 255, 255, 0.2);
+            transform: translateY(-5px);
+        }
+
+        .feature-icon {
+            width: 64px;
+            height: 64px;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            margin-bottom: 24px;
+        }
+
+        .feature-icon.green { background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%); }
+        .feature-icon.yellow { background: linear-gradient(135deg, #FFC107 0%, #f59e0b 100%); }
+        .feature-icon.red { background: linear-gradient(135deg, #F44336 0%, #e53935 100%); }
+        .feature-icon.blue { background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); }
+        .feature-icon.purple { background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); }
+
+        .feature-title {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 12px;
+        }
+
+        .feature-description {
+            font-size: 16px;
+            color: var(--text-light);
+            line-height: 1.6;
+        }
+
+        /* ===== USE CASES SECTION ===== */
+        .use-cases-section {
+            padding: 120px 80px;
+            background: var(--bg-dark);
+        }
+
+        .use-cases-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 30px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .use-case-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 20px;
+            padding: 32px;
+            transition: all 0.3s ease;
+        }
+
+        .use-case-card:hover {
+            background: rgba(255, 255, 255, 0.06);
+            border-color: rgba(76, 175, 80, 0.3);
+            transform: translateY(-3px);
+        }
+
+        .use-case-emoji {
+            font-size: 48px;
+            margin-bottom: 16px;
+        }
+
+        .use-case-title {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .use-case-description {
+            font-size: 14px;
+            color: var(--text-light);
+            line-height: 1.5;
+        }
+
+        /* ===== HOW IT WORKS SECTION ===== */
+        .how-it-works-section {
+            padding: 120px 80px;
+            background: linear-gradient(180deg, var(--bg-dark-lighter) 0%, var(--bg-dark) 100%);
+        }
+
+        .steps-container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .step {
+            display: flex;
+            align-items: flex-start;
+            gap: 40px;
+            margin-bottom: 60px;
+            opacity: 0;
+            animation: fadeInUp 0.8s ease-out forwards;
+        }
+
+        .step:nth-child(1) { animation-delay: 0.2s; }
+        .step:nth-child(2) { animation-delay: 0.4s; }
+        .step:nth-child(3) { animation-delay: 0.6s; }
+        .step:nth-child(4) { animation-delay: 0.8s; }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .step-number {
+            width: 80px;
+            height: 80px;
+            border-radius: 20px;
+            background: linear-gradient(135deg, var(--accent-green) 0%, var(--accent-blue) 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 36px;
+            font-weight: 900;
+            flex-shrink: 0;
+            box-shadow: 0 10px 30px rgba(76, 175, 80, 0.3);
+        }
+
+        .step-content {
+            flex: 1;
+            padding-top: 8px;
+        }
+
+        .step-title {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 12px;
+        }
+
+        .step-description {
+            font-size: 18px;
+            color: var(--text-light);
+            line-height: 1.6;
+        }
+
+        /* ===== CTA SECTION ===== */
+        .cta-section {
+            padding: 120px 80px;
+            background: linear-gradient(135deg, var(--accent-green) 0%, var(--accent-blue) 100%);
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .cta-section::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 1px, transparent 1px);
+            background-size: 50px 50px;
+            animation: gridMove 20s linear infinite;
+        }
+
+        @keyframes gridMove {
+            0% { transform: translate(0, 0); }
+            100% { transform: translate(50px, 50px); }
+        }
+
+        .cta-content {
+            position: relative;
+            z-index: 10;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .cta-title {
+            font-size: 56px;
+            font-weight: 900;
+            margin-bottom: 24px;
+            letter-spacing: -2px;
+        }
+
+        .cta-description {
+            font-size: 22px;
+            margin-bottom: 40px;
+            opacity: 0.95;
+            line-height: 1.6;
+        }
+
+        .cta-button {
+            padding: 20px 48px;
+            background: white;
+            color: var(--accent-green);
+            border-radius: 14px;
+            font-size: 18px;
+            font-weight: 700;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.2);
+            transition: all 0.3s ease;
+        }
+
+        .cta-button:hover {
+            transform: translateY(-3px) scale(1.05);
+            box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+        }
+
+        /* ===== FOOTER ===== */
+        footer {
+            padding: 60px 80px;
+            background: #0a0f1a;
+            text-align: center;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .footer-links {
+            display: flex;
+            justify-content: center;
+            gap: 40px;
+            margin-bottom: 24px;
+        }
+
+        .footer-links a {
+            color: var(--text-light);
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.3s ease;
+        }
+
+        .footer-links a:hover {
+            color: var(--accent-green);
+        }
+
+        .footer-text {
+            color: var(--text-sub);
+            font-size: 14px;
+        }
+
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .hero-content {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .hero-text {
+                max-width: 100%;
+            }
+
+            .cta-buttons {
+                justify-content: center;
+            }
+
+            .hero-visual {
+                height: 500px;
+                width: 100%;
+            }
+
+            .app-card {
+                width: 90%;
+                max-width: 400px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .hero-section,
+            .features-section,
+            .use-cases-section,
+            .how-it-works-section,
+            .cta-section,
+            footer {
+                padding: 60px 24px;
+            }
+
+            h1 {
+                font-size: 52px;
+            }
+
+            .section-title {
+                font-size: 36px;
+            }
+
+            .cta-title {
+                font-size: 36px;
+            }
+
+            .features-grid,
+            .use-cases-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .step {
+                flex-direction: column;
+            }
+        }
+
+        /* Scroll animations */
+        .fade-in-section {
+            opacity: 0;
+            transform: translateY(50px);
+            transition: opacity 0.8s ease, transform 0.8s ease;
+        }
+
+        .fade-in-section.is-visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    </style>
 </head>
 <body>
-    <p>Redirecting to <a href="privacy-policy.html">Privacy Policy</a>...</p>
+
+    <!-- HERO SECTION -->
+    <section class="hero-section">
+        <div class="glow-orb orb-1"></div>
+        <div class="glow-orb orb-2"></div>
+        <div class="glow-orb orb-3"></div>
+
+        <div class="hero-content">
+            <div class="hero-text">
+                <div class="badge">🎉 NOW IN CLOSED TESTING</div>
+                <h1>
+                    Days<br>
+                    <span class="gradient-text">Since</span>
+                </h1>
+                <p class="hero-description">
+                    Track your recurring events with beautiful visual progress rings.
+                    Simple, elegant, and designed to help you stay on top of life's regular tasks.
+                </p>
+                <div class="cta-buttons">
+                    <a href="#join-testing" class="btn btn-primary">
+                        Join Testing →
+                    </a>
+                    <a href="privacy-policy.html" class="btn btn-secondary">
+                        Privacy Policy
+                    </a>
+                </div>
+            </div>
+
+            <div class="hero-visual">
+                <!-- Card 1: Overdue (Red) -->
+                <div class="app-card card-1 red-theme">
+                    <div class="progress-ring-container">
+                        <svg width="90" height="90" viewBox="0 0 100 100">
+                            <circle class="ring-bg" cx="50" cy="50" r="40"></circle>
+                            <circle class="ring-progress" cx="50" cy="50" r="40" stroke-dasharray="251" stroke-dashoffset="40"></circle>
+                        </svg>
+                        <div class="ring-text">
+                            <div class="days-num">5</div>
+                            <div class="days-label">days</div>
+                        </div>
+                    </div>
+                    <div class="card-details">
+                        <div class="card-header">
+                            <div class="icon-square">✿</div>
+                            <div class="card-title">Water Plants</div>
+                        </div>
+                        <div class="card-status">Overdue by 2 days</div>
+                    </div>
+                    <div class="refresh-icon">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"></path><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
+                    </div>
+                </div>
+
+                <!-- Card 2: Warning (Yellow) -->
+                <div class="app-card card-2 yellow-theme">
+                    <div class="progress-ring-container">
+                        <svg width="90" height="90" viewBox="0 0 100 100">
+                            <circle class="ring-bg" cx="50" cy="50" r="40"></circle>
+                            <circle class="ring-progress" cx="50" cy="50" r="40" stroke-dasharray="251" stroke-dashoffset="75"></circle>
+                        </svg>
+                        <div class="ring-text">
+                            <div class="days-num">21</div>
+                            <div class="days-label">days</div>
+                        </div>
+                    </div>
+                    <div class="card-details">
+                        <div class="card-header">
+                            <div class="icon-square">🚗</div>
+                            <div class="card-title">Oil Change</div>
+                        </div>
+                        <div class="card-status">Due in 9 days</div>
+                    </div>
+                    <div class="refresh-icon">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"></path><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
+                    </div>
+                </div>
+
+                <!-- Card 3: On Track (Green) -->
+                <div class="app-card card-3 green-theme">
+                    <div class="progress-ring-container">
+                        <svg width="90" height="90" viewBox="0 0 100 100">
+                            <circle class="ring-bg" cx="50" cy="50" r="40"></circle>
+                            <circle class="ring-progress" cx="50" cy="50" r="40" stroke-dasharray="251" stroke-dashoffset="150"></circle>
+                        </svg>
+                        <div class="ring-text">
+                            <div class="days-num">6</div>
+                            <div class="days-label">days</div>
+                        </div>
+                    </div>
+                    <div class="card-details">
+                        <div class="card-header">
+                            <div class="icon-square">✂️</div>
+                            <div class="card-title">Haircut</div>
+                        </div>
+                        <div class="card-status">24 days remaining</div>
+                    </div>
+                    <div class="refresh-icon">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"></path><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- FEATURES SECTION -->
+    <section class="features-section fade-in-section">
+        <div class="section-header">
+            <div class="section-badge">FEATURES</div>
+            <h2 class="section-title">Everything You Need</h2>
+            <p class="section-subtitle">
+                Powerful features wrapped in a beautifully simple interface.
+                Track everything that matters without the complexity.
+            </p>
+        </div>
+
+        <div class="features-grid">
+            <div class="feature-card">
+                <div class="feature-icon green">📊</div>
+                <h3 class="feature-title">Visual Progress Rings</h3>
+                <p class="feature-description">
+                    Beautiful circular progress indicators show exactly where you are in each cycle.
+                    See your progress at a glance with color-coded status.
+                </p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon yellow">🎨</div>
+                <h3 class="feature-title">Smart Color Coding</h3>
+                <p class="feature-description">
+                    Green means you're on track. Yellow warns you're approaching the deadline.
+                    Red alerts you when overdue. Instant visual feedback.
+                </p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon red">🔔</div>
+                <h3 class="feature-title">Smart Reminders</h3>
+                <p class="feature-description">
+                    Get notified at 90% of your interval. Never miss an important recurring task again.
+                    Customizable per-item notifications.
+                </p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon blue">⚡</div>
+                <h3 class="feature-title">35+ Templates</h3>
+                <p class="feature-description">
+                    Quick-start templates for haircuts, oil changes, dental visits, and more.
+                    Get started in seconds with pre-configured intervals.
+                </p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon purple">🌙</div>
+                <h3 class="feature-title">Dark & Light Themes</h3>
+                <p class="feature-description">
+                    Beautiful minimal design that adapts to your system theme.
+                    Easy on the eyes whether you're an early bird or night owl.
+                </p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon green">🔒</div>
+                <h3 class="feature-title">100% Offline & Private</h3>
+                <p class="feature-description">
+                    All data stored locally on your device. No account required.
+                    No data collection. Your privacy is paramount.
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <!-- USE CASES SECTION -->
+    <section class="use-cases-section fade-in-section">
+        <div class="section-header">
+            <div class="section-badge">USE CASES</div>
+            <h2 class="section-title">Perfect For</h2>
+            <p class="section-subtitle">
+                From personal care to home maintenance, Days Since helps you stay on top of everything.
+            </p>
+        </div>
+
+        <div class="use-cases-grid">
+            <div class="use-case-card">
+                <div class="use-case-emoji">✂️</div>
+                <h3 class="use-case-title">Personal Care</h3>
+                <p class="use-case-description">Haircuts, skincare routines, dental cleanings</p>
+            </div>
+
+            <div class="use-case-card">
+                <div class="use-case-emoji">🚗</div>
+                <h3 class="use-case-title">Vehicle Maintenance</h3>
+                <p class="use-case-description">Oil changes, tire rotations, inspections</p>
+            </div>
+
+            <div class="use-case-card">
+                <div class="use-case-emoji">🏠</div>
+                <h3 class="use-case-title">Home Tasks</h3>
+                <p class="use-case-description">Filter changes, lawn care, deep cleaning</p>
+            </div>
+
+            <div class="use-case-card">
+                <div class="use-case-emoji">💊</div>
+                <h3 class="use-case-title">Health & Wellness</h3>
+                <p class="use-case-description">Doctor checkups, prescriptions, vitamins</p>
+            </div>
+
+            <div class="use-case-card">
+                <div class="use-case-emoji">🌱</div>
+                <h3 class="use-case-title">Plant Care</h3>
+                <p class="use-case-description">Watering schedules, fertilizing, repotting</p>
+            </div>
+
+            <div class="use-case-card">
+                <div class="use-case-emoji">📅</div>
+                <h3 class="use-case-title">Life Admin</h3>
+                <p class="use-case-description">Password updates, backups, subscriptions</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- HOW IT WORKS SECTION -->
+    <section class="how-it-works-section fade-in-section">
+        <div class="section-header">
+            <div class="section-badge">HOW IT WORKS</div>
+            <h2 class="section-title">Simple & Intuitive</h2>
+            <p class="section-subtitle">
+                Get started in seconds. No learning curve required.
+            </p>
+        </div>
+
+        <div class="steps-container">
+            <div class="step">
+                <div class="step-number">1</div>
+                <div class="step-content">
+                    <h3 class="step-title">Add Your First Tracker</h3>
+                    <p class="step-description">
+                        Tap the + button and either choose from 35+ templates or create a custom tracker.
+                        Set your name, interval, icon, and color.
+                    </p>
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-number">2</div>
+                <div class="step-content">
+                    <h3 class="step-title">Watch Progress Visually</h3>
+                    <p class="step-description">
+                        Your progress ring fills up as days pass. Green means you're on track,
+                        yellow warns you're approaching the interval, red alerts when overdue.
+                    </p>
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-number">3</div>
+                <div class="step-content">
+                    <h3 class="step-title">Get Smart Reminders</h3>
+                    <p class="step-description">
+                        Receive notifications at 90% of your interval. Enable/disable per item or globally.
+                        Never miss an important recurring task again.
+                    </p>
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-number">4</div>
+                <div class="step-content">
+                    <h3 class="step-title">Reset with One Tap</h3>
+                    <p class="step-description">
+                        Completed the task? Tap the reset button. The counter resets to day 0
+                        and your progress ring starts fresh. Undo available if you tap by mistake.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA SECTION -->
+    <section class="cta-section" id="join-testing">
+        <div class="cta-content">
+            <h2 class="cta-title">Join Closed Testing Today</h2>
+            <p class="cta-description">
+                You're invited! Help shape the future of Days Since by joining our exclusive closed testing program.
+                Test all features before public launch on January 25, 2026.
+            </p>
+            <a href="mailto:gamer7325@gmail.com?subject=Days%20Since%20-%20Join%20Testing&body=Hi!%20I'd%20like%20to%20join%20the%20closed%20testing%20for%20Days%20Since." class="cta-button">
+                <span>Request Testing Access</span>
+                <span>→</span>
+            </a>
+        </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer>
+        <div class="footer-links">
+            <a href="privacy-policy.html">Privacy Policy</a>
+            <a href="https://github.com/Rukhtam/days-since-tracker">GitHub</a>
+            <a href="mailto:gamer7325@gmail.com">Support</a>
+        </div>
+        <p class="footer-text">
+            © 2026 Days Since Tracker. All rights reserved.<br>
+            Launching January 25, 2026 on Google Play Store
+        </p>
+    </footer>
+
+    <!-- Scroll Animation Script -->
+    <script>
+        // Intersection Observer for scroll animations
+        const fadeInSections = document.querySelectorAll('.fade-in-section');
+
+        const fadeInObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('is-visible');
+                }
+            });
+        }, {
+            threshold: 0.1
+        });
+
+        fadeInSections.forEach(section => {
+            fadeInObserver.observe(section);
+        });
+
+        // Smooth scroll for anchor links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+    </script>
 </body>
 </html>
