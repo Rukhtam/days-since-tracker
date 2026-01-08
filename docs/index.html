@@ -716,8 +716,8 @@
             }
 
             .hero-section {
-                padding: 60px 16px 80px 16px;
-                min-height: 110vh;
+                padding: 60px 16px 120px 16px;
+                min-height: 130vh;
             }
 
             h1 {
@@ -741,102 +741,118 @@
                 flex-direction: column;
             }
 
+            /* Stack CTA buttons vertically on mobile */
+            .cta-buttons {
+                flex-direction: column;
+                gap: 12px;
+                width: 100%;
+                max-width: 280px;
+                margin: 0 auto;
+            }
+
+            .btn {
+                padding: 12px 24px;
+                font-size: 14px;
+                width: 100%;
+                justify-content: center;
+            }
+
             /* Fix floating cards on mobile */
             .hero-visual {
-                height: 480px;
+                height: 550px;
                 width: 100%;
                 position: relative;
                 overflow: visible;
                 display: flex;
                 align-items: flex-start;
                 justify-content: center;
-                margin-top: 40px;
+                margin-top: 50px;
             }
 
             .app-card {
-                width: calc(100% - 40px);
-                max-width: 320px;
-                height: 110px;
-                padding: 16px;
+                width: calc(100% - 32px);
+                max-width: 300px;
+                height: 100px;
+                padding: 14px;
                 left: 50%;
                 right: auto;
             }
 
             .card-1 {
-                top: 20px;
-                transform: translateX(-50%) rotate(-2deg);
+                top: 30px;
+                transform: translateX(-50%) rotate(-1deg);
                 animation: float-card-mobile-1 6s ease-in-out infinite;
             }
 
             .card-2 {
-                top: 160px;
+                top: 170px;
                 transform: translateX(-50%) rotate(1deg) scale(0.95);
                 animation: float-card-mobile-2 7s ease-in-out infinite;
             }
 
             .card-3 {
-                top: 300px;
-                transform: translateX(-50%) rotate(-1deg) scale(0.9);
+                top: 310px;
+                transform: translateX(-50%) rotate(-1deg) scale(0.92);
                 animation: float-card-mobile-3 8s ease-in-out infinite;
             }
 
             @keyframes float-card-mobile-1 {
-                0%, 100% { transform: translateX(-50%) rotate(-2deg) translateY(0); }
-                50% { transform: translateX(-50%) rotate(-2deg) translateY(-10px); }
+                0%, 100% { transform: translateX(-50%) rotate(-1deg) translateY(0); }
+                50% { transform: translateX(-50%) rotate(-1deg) translateY(-8px); }
             }
 
             @keyframes float-card-mobile-2 {
                 0%, 100% { transform: translateX(-50%) rotate(1deg) scale(0.95) translateY(0); }
-                50% { transform: translateX(-50%) rotate(1deg) scale(0.95) translateY(10px); }
+                50% { transform: translateX(-50%) rotate(1deg) scale(0.95) translateY(8px); }
             }
 
             @keyframes float-card-mobile-3 {
-                0%, 100% { transform: translateX(-50%) rotate(-1deg) scale(0.9) translateY(0); }
-                50% { transform: translateX(-50%) rotate(-1deg) scale(0.9) translateY(-8px); }
+                0%, 100% { transform: translateX(-50%) rotate(-1deg) scale(0.92) translateY(0); }
+                50% { transform: translateX(-50%) rotate(-1deg) scale(0.92) translateY(-6px); }
             }
 
             .progress-ring-container {
-                width: 70px;
-                height: 70px;
-                margin-right: 14px;
+                width: 65px;
+                height: 65px;
+                margin-right: 12px;
             }
 
             .progress-ring-container svg {
-                width: 70px;
-                height: 70px;
+                width: 65px;
+                height: 65px;
             }
 
             .days-num {
-                font-size: 22px;
+                font-size: 20px;
             }
 
             .days-label {
-                font-size: 9px;
+                font-size: 8px;
             }
 
             .icon-square {
-                width: 34px;
-                height: 34px;
-                font-size: 16px;
-                margin-right: 10px;
+                width: 32px;
+                height: 32px;
+                font-size: 15px;
+                margin-right: 8px;
             }
 
             .card-title {
-                font-size: 16px;
+                font-size: 15px;
             }
 
             .card-status {
-                font-size: 12px;
-                margin-left: 44px;
+                font-size: 11px;
+                margin-left: 40px;
             }
 
             .refresh-icon {
-                margin-left: 8px;
+                margin-left: 6px;
             }
 
             .refresh-icon svg {
-                width: 18px;
-                height: 18px;
+                width: 16px;
+                height: 16px;
             }
         }
 
