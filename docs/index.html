@@ -28,6 +28,10 @@
             box-sizing: border-box;
         }
 
+        html {
+            scroll-behavior: smooth;
+        }
+
         body {
             font-family: 'Poppins', sans-serif;
             background: var(--bg-dark);
@@ -140,6 +144,7 @@
             color: var(--text-light);
             line-height: 1.6;
             margin-bottom: 40px;
+            margin-bottom: 40px;
             font-weight: 500;
             animation: slideInLeft 0.8s ease-out 0.4s backwards;
         }
@@ -162,6 +167,7 @@
             transition: all 0.3s ease;
             cursor: pointer;
             border: none;
+            min-height: 48px; /* Better touch target for mobile */
         }
 
         .btn-primary {
@@ -175,6 +181,11 @@
             box-shadow: 0 15px 40px rgba(76, 175, 80, 0.5);
         }
 
+        .btn-primary:active {
+            transform: translateY(-1px);
+            box-shadow: 0 8px 25px rgba(76, 175, 80, 0.45);
+        }
+
         .btn-secondary {
             background: rgba(255, 255, 255, 0.1);
             color: white;
@@ -184,6 +195,10 @@
         .btn-secondary:hover {
             background: rgba(255, 255, 255, 0.15);
             border-color: rgba(255, 255, 255, 0.3);
+        }
+
+        .btn-secondary:active {
+            background: rgba(255, 255, 255, 0.2);
         }
 
         /* Floating App Cards */
@@ -641,11 +656,17 @@
             gap: 12px;
             box-shadow: 0 15px 40px rgba(0,0,0,0.2);
             transition: all 0.3s ease;
+            min-height: 48px; /* Better touch target */
         }
 
         .cta-button:hover {
             transform: translateY(-3px) scale(1.05);
             box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+        }
+
+        .cta-button:active {
+            transform: translateY(-1px) scale(1.02);
+            box-shadow: 0 12px 35px rgba(0,0,0,0.25);
         }
 
         /* ===== FOOTER ===== */
@@ -681,9 +702,14 @@
 
         /* Responsive */
         @media (max-width: 1200px) {
+            .hero-section {
+                padding: 80px 40px;
+            }
+
             .hero-content {
                 flex-direction: column;
                 text-align: center;
+                gap: 60px;
             }
 
             .hero-text {
@@ -701,7 +727,7 @@
 
             .app-card {
                 width: 90%;
-                max-width: 400px;
+                max-width: 380px;
             }
         }
 
@@ -712,33 +738,75 @@
             .how-it-works-section,
             .cta-section,
             footer {
-                padding: 60px 24px;
+                padding: 60px 20px;
             }
 
             .hero-section {
-                padding: 60px 16px 120px 16px;
-                min-height: 130vh;
+                min-height: 100vh;
+                padding: 40px 20px;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+            }
+
+            .hero-content {
+                gap: 40px;
+            }
+
+            .badge {
+                margin-bottom: 16px;
             }
 
             h1 {
-                font-size: 52px;
+                font-size: 48px;
+                line-height: 1.1;
+                margin-bottom: 16px;
+            }
+
+            .hero-description {
+                font-size: 16px;
+                line-height: 1.5;
+                margin-bottom: 24px;
+            }
+
+            .cta-buttons {
+                margin-bottom: 32px;
             }
 
             .section-title {
-                font-size: 36px;
+                font-size: 32px;
+                line-height: 1.2;
             }
 
             .cta-title {
-                font-size: 36px;
+                font-size: 32px;
+                line-height: 1.2;
+            }
+
+            .hero-description,
+            .section-subtitle,
+            .cta-description {
+                font-size: 16px;
+                line-height: 1.6;
             }
 
             .features-grid,
             .use-cases-grid {
                 grid-template-columns: 1fr;
+                gap: 20px;
             }
 
             .step {
                 flex-direction: column;
+                gap: 16px;
+            }
+
+            .step-number {
+                margin: 0 auto;
+            }
+
+            .step-content {
+                text-align: center;
             }
 
             /* Stack CTA buttons vertically on mobile */
@@ -746,52 +814,53 @@
                 flex-direction: column;
                 gap: 12px;
                 width: 100%;
-                max-width: 280px;
-                margin: 0 auto;
+                max-width: 100%;
+                margin: 0;
             }
 
             .btn {
-                padding: 12px 24px;
-                font-size: 14px;
+                padding: 14px 24px;
+                font-size: 15px;
                 width: 100%;
                 justify-content: center;
             }
 
-            /* Fix floating cards on mobile */
+            /* Fix floating cards on mobile - scale and center */
             .hero-visual {
-                height: 550px;
+                height: 320px;
                 width: 100%;
                 position: relative;
                 overflow: visible;
                 display: flex;
                 align-items: flex-start;
                 justify-content: center;
-                margin-top: 50px;
+                margin-top: 20px;
+                transform: scale(0.85);
             }
 
             .app-card {
-                width: calc(100% - 32px);
-                max-width: 300px;
-                height: 100px;
-                padding: 14px;
+                width: calc(100% - 40px);
+                max-width: 320px;
+                height: 90px;
+                padding: 12px;
                 left: 50%;
                 right: auto;
             }
 
             .card-1 {
-                top: 30px;
+                top: 10px;
                 transform: translateX(-50%) rotate(-1deg);
                 animation: float-card-mobile-1 6s ease-in-out infinite;
             }
 
             .card-2 {
-                top: 170px;
+                top: 125px;
                 transform: translateX(-50%) rotate(1deg) scale(0.95);
                 animation: float-card-mobile-2 7s ease-in-out infinite;
             }
 
             .card-3 {
-                top: 310px;
+                top: 240px;
                 transform: translateX(-50%) rotate(-1deg) scale(0.92);
                 animation: float-card-mobile-3 8s ease-in-out infinite;
             }
@@ -812,14 +881,14 @@
             }
 
             .progress-ring-container {
-                width: 65px;
-                height: 65px;
+                width: 60px;
+                height: 60px;
                 margin-right: 12px;
             }
 
             .progress-ring-container svg {
-                width: 65px;
-                height: 65px;
+                width: 60px;
+                height: 60px;
             }
 
             .days-num {
@@ -831,9 +900,9 @@
             }
 
             .icon-square {
-                width: 32px;
-                height: 32px;
-                font-size: 15px;
+                width: 30px;
+                height: 30px;
+                font-size: 14px;
                 margin-right: 8px;
             }
 
@@ -843,16 +912,131 @@
 
             .card-status {
                 font-size: 11px;
-                margin-left: 40px;
+                margin-left: 38px;
             }
 
             .refresh-icon {
-                margin-left: 6px;
+                margin-left: 4px;
             }
 
             .refresh-icon svg {
-                width: 16px;
-                height: 16px;
+                width: 14px;
+                height: 14px;
+            }
+
+            /* Footer improvements */
+            footer {
+                padding: 40px 20px;
+            }
+
+            .footer-links {
+                flex-wrap: wrap;
+                gap: 16px;
+                justify-content: center;
+            }
+
+            .footer-text {
+                text-align: center;
+            }
+
+            /* CTA button on mobile */
+            .cta-button {
+                padding: 16px 32px;
+                font-size: 16px;
+                width: 100%;
+                max-width: 320px;
+                justify-content: center;
+            }
+        }
+
+        /* Small mobile devices (< 480px) */
+        @media (max-width: 480px) {
+            h1 {
+                font-size: 42px;
+                margin-bottom: 10px;
+            }
+
+            .section-title {
+                font-size: 28px;
+            }
+
+            .cta-title {
+                font-size: 28px;
+            }
+
+            .hero-section {
+                padding: 20px 16px 28px 16px;
+            }
+
+            .badge {
+                margin-bottom: 8px;
+                font-size: 10px;
+                padding: 5px 10px;
+            }
+
+            h1 {
+                font-size: 38px;
+                margin-bottom: 6px;
+            }
+
+            .hero-description {
+                font-size: 14px;
+                line-height: 1.4;
+                margin-bottom: 12px;
+            }
+
+            .cta-buttons {
+                margin-bottom: 14px;
+            }
+
+            .section-badge {
+                font-size: 11px;
+                padding: 6px 14px;
+            }
+
+            .btn {
+                padding: 12px 20px;
+                font-size: 14px;
+            }
+
+            .cta-button {
+                padding: 14px 28px;
+                font-size: 15px;
+            }
+
+            .app-card {
+                width: calc(100% - 32px);
+                max-width: 260px;
+                height: 65px;
+                padding: 7px;
+            }
+
+            .hero-visual {
+                transform: scale(0.7);
+                height: 320px;
+            }
+
+            .feature-card,
+            .use-case-card {
+                padding: 24px;
+            }
+
+            .feature-title,
+            .use-case-title {
+                font-size: 18px;
+            }
+
+            .feature-description,
+            .use-case-description {
+                font-size: 14px;
+            }
+
+            .step-title {
+                font-size: 18px;
+            }
+
+            .step-description {
+                font-size: 14px;
             }
         }
 
