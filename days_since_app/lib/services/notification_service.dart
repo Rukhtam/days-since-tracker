@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest_all.dart' as tz_data;
 import '../models/tracked_item.dart';
@@ -137,32 +138,35 @@ class NotificationService {
     }
   }
 
-  /// Check if notifications are permitted.
+  /// Check if notifications are permitted using permission_handler.
+  /// This provides accurate status even for permanently denied permissions.
   Future<bool> areNotificationsEnabled() async {
     if (!_isInitialized) return false;
 
     try {
-      if (Platform.isAndroid) {
-        final androidPlugin = _notifications
-            .resolvePlatformSpecificImplementation<
-              AndroidFlutterLocalNotificationsPlugin
-            >();
-
-        if (androidPlugin != null) {
-          final enabled = await androidPlugin.areNotificationsEnabled();
-          return enabled ?? false;
-        }
-        return true;
-      } else if (Platform.isIOS) {
-        // For iOS, we'd need to check using permission_handler
-        // For now, assume enabled if initialized
-        return true;
-      }
-      return false;
+      final status = await Permission.notification.status;
+      debugPrint('NotificationService: Permission status = $status');
+      return status.isGranted;
     } catch (e) {
       debugPrint('NotificationService: Failed to check permissions - $e');
       return false;
     }
+  }
+
+  /// Check if notification permission is permanently denied.
+  /// If true, user must go to system settings to enable.
+  Future<bool> isPermissionPermanentlyDenied() async {
+    try {
+      final status = await Permission.notification.status;
+      return status.isPermanentlyDenied;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  /// Open app settings so user can enable notification permission.
+  Future<bool> openNotificationSettings() async {
+    return await openAppSettings();
   }
 
   /// Schedule a notification for a tracked item when it reaches 90% of interval.

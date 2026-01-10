@@ -14,20 +14,59 @@ class SettingsScreen extends StatefulWidget {
   State<SettingsScreen> createState() => _SettingsScreenState();
 }
 
-class _SettingsScreenState extends State<SettingsScreen> {
+class _SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObserver {
   bool _notificationsPermissionGranted = false;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _checkNotificationPermissions();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Re-check permissions when app resumes (user may have changed settings)
+    if (state == AppLifecycleState.resumed) {
+      _checkNotificationPermissionsAndUpdate();
+    }
   }
 
   Future<void> _checkNotificationPermissions() async {
     final enabled = await NotificationService().areNotificationsEnabled();
-    setState(() {
-      _notificationsPermissionGranted = enabled;
-    });
+    if (mounted) {
+      setState(() {
+        _notificationsPermissionGranted = enabled;
+      });
+    }
+  }
+
+  /// Check permissions and auto-enable notifications if permission was just granted
+  Future<void> _checkNotificationPermissionsAndUpdate() async {
+    final enabled = await NotificationService().areNotificationsEnabled();
+    final wasGranted = _notificationsPermissionGranted;
+    
+    if (mounted) {
+      setState(() {
+        _notificationsPermissionGranted = enabled;
+      });
+      
+      // If permission was just granted (wasn't before, is now)
+      // and user has notifications enabled in app settings,
+      // reschedule all notifications
+      if (enabled && !wasGranted) {
+        final settings = context.read<SettingsProvider>();
+        if (settings.notificationsEnabled) {
+          _rescheduleAllNotifications();
+        }
+      }
+    }
   }
 
   @override
@@ -161,25 +200,37 @@ class _SettingsScreenState extends State<SettingsScreen> {
           value:
               settings.notificationsEnabled && _notificationsPermissionGranted,
           onChanged: (value) async {
-            if (!_notificationsPermissionGranted) {
-              // Request permission
-              final granted = await NotificationService().requestPermissions();
-              if (granted) {
+            if (value) {
+              // User is trying to enable notifications
+              // First, re-check current permission status
+              final currentlyEnabled = await NotificationService().areNotificationsEnabled();
+              
+              if (currentlyEnabled) {
+                // Permission is already granted in system settings
                 setState(() {
                   _notificationsPermissionGranted = true;
                 });
                 settings.notificationsEnabled = true;
                 _rescheduleAllNotifications();
               } else {
-                _showPermissionDeniedDialog();
+                // Permission not granted - try to request it
+                final granted = await NotificationService().requestPermissions();
+                
+                if (granted) {
+                  setState(() {
+                    _notificationsPermissionGranted = true;
+                  });
+                  settings.notificationsEnabled = true;
+                  _rescheduleAllNotifications();
+                } else {
+                  // Permission denied - show dialog with option to open settings
+                  _showPermissionDeniedDialog();
+                }
               }
             } else {
-              settings.notificationsEnabled = value;
-              if (value) {
-                _rescheduleAllNotifications();
-              } else {
-                NotificationService().cancelAllNotifications();
-              }
+              // User is disabling notifications
+              settings.notificationsEnabled = false;
+              NotificationService().cancelAllNotifications();
             }
             _hapticFeedback(settings);
           },
@@ -509,7 +560,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('OK'),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              // Open system settings
+              await NotificationService().openNotificationSettings();
+            },
+            child: const Text('Open Settings'),
           ),
         ],
       ),
