@@ -2,7 +2,7 @@ name: days_since_tracker
 description: "A minimal tracker app to monitor days since recurring events like haircuts, oil changes, and more."
 publish_to: 'none'
 
-version: 1.0.0+1
+version: 1.0.1+2
 
 environment:
   sdk: ^3.10.4
