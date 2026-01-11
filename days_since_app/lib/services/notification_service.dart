@@ -7,6 +7,15 @@ import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest_all.dart' as tz_data;
 import '../models/tracked_item.dart';
 
+/// Result of a permission request operation
+enum PermissionRequestResult {
+  granted,
+  denied,
+  permanentlyDenied,
+  notInitialized,
+  error,
+}
+
 /// Service class that handles all local notification operations.
 /// Manages scheduling, canceling, and updating notifications for tracked items.
 class NotificationService {
@@ -138,17 +147,50 @@ class NotificationService {
     }
   }
 
-  /// Check if notifications are permitted using permission_handler.
-  /// This provides accurate status even for permanently denied permissions.
+  /// Check if notifications are permitted using multiple methods for reliability.
+  /// Uses both permission_handler and flutter_local_notifications as fallback.
+  /// This handles edge cases on Android 14+/16 with One UI 8.
   Future<bool> areNotificationsEnabled() async {
     if (!_isInitialized) return false;
 
     try {
-      final status = await Permission.notification.status;
-      debugPrint('NotificationService: Permission status = $status');
-      return status.isGranted;
+      // Method 1: Use permission_handler (preferred)
+      final permissionStatus = await Permission.notification.status;
+      debugPrint('NotificationService: permission_handler status = $permissionStatus');
+      
+      // Method 2: Use flutter_local_notifications as fallback/verification
+      bool? flnEnabled;
+      if (Platform.isAndroid) {
+        final androidPlugin = _notifications
+            .resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin
+            >();
+        if (androidPlugin != null) {
+          flnEnabled = await androidPlugin.areNotificationsEnabled();
+        }
+      }
+      debugPrint('NotificationService: flutter_local_notifications enabled = $flnEnabled');
+      
+      // If either method says granted, consider it granted
+      // This handles edge cases where one method fails on specific devices
+      final isGranted = permissionStatus.isGranted || (flnEnabled == true);
+      debugPrint('NotificationService: Final permission result = $isGranted');
+      
+      return isGranted;
     } catch (e) {
       debugPrint('NotificationService: Failed to check permissions - $e');
+      // Last resort fallback: try flutter_local_notifications only
+      try {
+        if (Platform.isAndroid) {
+          final androidPlugin = _notifications
+              .resolvePlatformSpecificImplementation<
+                AndroidFlutterLocalNotificationsPlugin
+              >();
+          final enabled = await androidPlugin?.areNotificationsEnabled();
+          debugPrint('NotificationService: Fallback check = $enabled');
+          return enabled ?? false;
+        }
+      } catch (_) {}
       return false;
     }
   }
@@ -158,9 +200,47 @@ class NotificationService {
   Future<bool> isPermissionPermanentlyDenied() async {
     try {
       final status = await Permission.notification.status;
+      debugPrint('NotificationService: Checking permanently denied = ${status.isPermanentlyDenied}');
       return status.isPermanentlyDenied;
     } catch (e) {
+      debugPrint('NotificationService: Error checking permanently denied - $e');
       return false;
+    }
+  }
+
+  /// Request permission and return detailed status for better handling
+  Future<PermissionRequestResult> requestPermissionsWithStatus() async {
+    if (!_isInitialized) {
+      return PermissionRequestResult.notInitialized;
+    }
+
+    try {
+      // First check current status
+      final currentStatus = await Permission.notification.status;
+      debugPrint('NotificationService: Current status before request = $currentStatus');
+      
+      if (currentStatus.isGranted) {
+        return PermissionRequestResult.granted;
+      }
+      
+      if (currentStatus.isPermanentlyDenied) {
+        return PermissionRequestResult.permanentlyDenied;
+      }
+
+      // Request permission
+      final result = await Permission.notification.request();
+      debugPrint('NotificationService: Permission request result = $result');
+      
+      if (result.isGranted) {
+        return PermissionRequestResult.granted;
+      } else if (result.isPermanentlyDenied) {
+        return PermissionRequestResult.permanentlyDenied;
+      } else {
+        return PermissionRequestResult.denied;
+      }
+    } catch (e) {
+      debugPrint('NotificationService: Error requesting permission - $e');
+      return PermissionRequestResult.error;
     }
   }
 

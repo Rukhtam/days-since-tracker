@@ -204,6 +204,7 @@ class _SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObse
               // User is trying to enable notifications
               // First, re-check current permission status
               final currentlyEnabled = await NotificationService().areNotificationsEnabled();
+              debugPrint('Settings: Current permission status = $currentlyEnabled');
               
               if (currentlyEnabled) {
                 // Permission is already granted in system settings
@@ -213,18 +214,37 @@ class _SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObse
                 settings.notificationsEnabled = true;
                 _rescheduleAllNotifications();
               } else {
-                // Permission not granted - try to request it
-                final granted = await NotificationService().requestPermissions();
+                // Permission not granted - use detailed request
+                final result = await NotificationService().requestPermissionsWithStatus();
+                debugPrint('Settings: Permission request result = $result');
                 
-                if (granted) {
-                  setState(() {
-                    _notificationsPermissionGranted = true;
-                  });
-                  settings.notificationsEnabled = true;
-                  _rescheduleAllNotifications();
-                } else {
-                  // Permission denied - show dialog with option to open settings
-                  _showPermissionDeniedDialog();
+                switch (result) {
+                  case PermissionRequestResult.granted:
+                    setState(() {
+                      _notificationsPermissionGranted = true;
+                    });
+                    settings.notificationsEnabled = true;
+                    _rescheduleAllNotifications();
+                    break;
+                  case PermissionRequestResult.permanentlyDenied:
+                    // Must go to settings
+                    _showPermissionDeniedDialog();
+                    break;
+                  case PermissionRequestResult.denied:
+                    // Try requesting again via flutter_local_notifications
+                    final granted = await NotificationService().requestPermissions();
+                    if (granted) {
+                      setState(() {
+                        _notificationsPermissionGranted = true;
+                      });
+                      settings.notificationsEnabled = true;
+                      _rescheduleAllNotifications();
+                    } else {
+                      _showPermissionDeniedDialog();
+                    }
+                    break;
+                  default:
+                    _showPermissionDeniedDialog();
                 }
               }
             } else {
