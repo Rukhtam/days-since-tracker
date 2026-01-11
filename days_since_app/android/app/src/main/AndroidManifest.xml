@@ -6,6 +6,10 @@
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"/>
     <uses-permission android:name="android.permission.USE_EXACT_ALARM"/>
     <uses-permission android:name="android.permission.WAKE_LOCK"/>
+    
+    <!-- Battery optimization exemption for reliable scheduled notifications -->
+    <!-- Required for OEM skins: Samsung One UI, OPPO ColorOS, OnePlus OxygenOS, Xiaomi MIUI -->
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS"/>
 
     <application
         android:label="Days Since"
@@ -44,10 +48,26 @@
         <receiver android:exported="false" android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver" />
         <receiver android:exported="false" android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationBootReceiver">
             <intent-filter>
+                <!-- Standard Android boot completed -->
                 <action android:name="android.intent.action.BOOT_COMPLETED"/>
                 <action android:name="android.intent.action.MY_PACKAGE_REPLACED"/>
+                <action android:name="android.intent.action.LOCKED_BOOT_COMPLETED"/>
+                
+                <!-- HTC quick boot -->
                 <action android:name="android.intent.action.QUICKBOOT_POWERON" />
                 <action android:name="com.htc.intent.action.QUICKBOOT_POWERON"/>
+                
+                <!-- Samsung -->
+                <action android:name="android.intent.action.REBOOT"/>
+                
+                <!-- Xiaomi MIUI -->
+                <action android:name="android.intent.action.ACTION_BOOT_COMPLETED"/>
+                
+                <!-- OPPO ColorOS / OnePlus OxygenOS -->
+                <action android:name="android.intent.action.BOOT"/>
+                
+                <!-- Vivo -->
+                <action android:name="android.intent.action.FAST_BOOT_AFTER_FLASH"/>
             </intent-filter>
         </receiver>
         <!-- Notification action receiver -->

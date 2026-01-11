@@ -86,6 +86,11 @@ class NotificationService {
 
       if (_isInitialized) {
         debugPrint('NotificationService: Initialized successfully');
+        
+        // Create notification channel for Android 8+ with high importance
+        if (Platform.isAndroid) {
+          await _createNotificationChannel();
+        }
       } else {
         debugPrint('NotificationService: Initialization returned false');
       }
@@ -94,6 +99,34 @@ class NotificationService {
     } catch (e) {
       debugPrint('NotificationService: Failed to initialize - $e');
       return false;
+    }
+  }
+
+  /// Create notification channel for Android 8+ (API 26+)
+  /// This ensures notifications work properly on all Android versions
+  Future<void> _createNotificationChannel() async {
+    try {
+      final androidPlugin = _notifications
+          .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin
+          >();
+      
+      if (androidPlugin != null) {
+        const channel = AndroidNotificationChannel(
+          _channelId,
+          _channelName,
+          description: _channelDescription,
+          importance: Importance.high,
+          playSound: true,
+          enableVibration: true,
+          showBadge: true,
+        );
+        
+        await androidPlugin.createNotificationChannel(channel);
+        debugPrint('NotificationService: Notification channel created');
+      }
+    } catch (e) {
+      debugPrint('NotificationService: Failed to create notification channel - $e');
     }
   }
 
@@ -247,6 +280,123 @@ class NotificationService {
   /// Open app settings so user can enable notification permission.
   Future<bool> openNotificationSettings() async {
     return await openAppSettings();
+  }
+
+  /// Check if exact alarms are permitted (Android 12+ / API 31+)
+  /// Required for scheduled notifications to work reliably
+  Future<bool> canScheduleExactAlarms() async {
+    if (!Platform.isAndroid) return true;
+    
+    try {
+      final androidPlugin = _notifications
+          .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin
+          >();
+      
+      if (androidPlugin != null) {
+        final canSchedule = await androidPlugin.canScheduleExactNotifications();
+        debugPrint('NotificationService: Can schedule exact alarms = $canSchedule');
+        return canSchedule ?? true;
+      }
+      return true;
+    } catch (e) {
+      debugPrint('NotificationService: Error checking exact alarm permission - $e');
+      return true; // Assume allowed on older devices
+    }
+  }
+
+  /// Request exact alarm permission (Android 12+ / API 31+)
+  /// Opens system settings if needed
+  Future<bool> requestExactAlarmPermission() async {
+    if (!Platform.isAndroid) return true;
+    
+    try {
+      final androidPlugin = _notifications
+          .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin
+          >();
+      
+      if (androidPlugin != null) {
+        await androidPlugin.requestExactAlarmsPermission();
+        // Check if granted after request
+        return await canScheduleExactAlarms();
+      }
+      return true;
+    } catch (e) {
+      debugPrint('NotificationService: Error requesting exact alarm permission - $e');
+      return false;
+    }
+  }
+
+  /// Check if battery optimization is disabled for this app
+  /// Important for scheduled notifications on OPPO, Xiaomi, Samsung, etc.
+  Future<bool> isBatteryOptimizationDisabled() async {
+    if (!Platform.isAndroid) return true;
+    
+    try {
+      final status = await Permission.ignoreBatteryOptimizations.status;
+      debugPrint('NotificationService: Battery optimization status = $status');
+      return status.isGranted;
+    } catch (e) {
+      debugPrint('NotificationService: Error checking battery optimization - $e');
+      return false;
+    }
+  }
+
+  /// Request to disable battery optimization
+  /// This helps ensure notifications work on aggressive OEM skins
+  Future<bool> requestDisableBatteryOptimization() async {
+    if (!Platform.isAndroid) return true;
+    
+    try {
+      final status = await Permission.ignoreBatteryOptimizations.request();
+      debugPrint('NotificationService: Battery optimization request result = $status');
+      return status.isGranted;
+    } catch (e) {
+      debugPrint('NotificationService: Error requesting battery optimization disable - $e');
+      return false;
+    }
+  }
+
+  /// Get comprehensive notification status for diagnostics
+  /// Useful for troubleshooting notification issues on different devices
+  Future<Map<String, dynamic>> getNotificationDiagnostics() async {
+    final diagnostics = <String, dynamic>{};
+    
+    try {
+      diagnostics['isInitialized'] = _isInitialized;
+      diagnostics['notificationPermission'] = await areNotificationsEnabled();
+      
+      if (Platform.isAndroid) {
+        diagnostics['exactAlarmPermission'] = await canScheduleExactAlarms();
+        diagnostics['batteryOptimizationDisabled'] = await isBatteryOptimizationDisabled();
+        
+        // Get pending notifications count
+        final pending = await getPendingNotifications();
+        diagnostics['pendingNotificationsCount'] = pending.length;
+        
+        // Check permission_handler status
+        final permStatus = await Permission.notification.status;
+        diagnostics['permissionHandlerStatus'] = permStatus.toString();
+        
+        // Check flutter_local_notifications status
+        final androidPlugin = _notifications
+            .resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin
+            >();
+        if (androidPlugin != null) {
+          diagnostics['flnNotificationsEnabled'] = 
+              await androidPlugin.areNotificationsEnabled();
+        }
+      }
+      
+      debugPrint('NotificationService: Diagnostics = $diagnostics');
+    } catch (e) {
+      diagnostics['error'] = e.toString();
+      debugPrint('NotificationService: Diagnostics error - $e');
+    }
+    
+    return diagnostics;
   }
 
   /// Schedule a notification for a tracked item when it reaches 90% of interval.
