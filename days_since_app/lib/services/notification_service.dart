@@ -476,9 +476,6 @@ class NotificationService {
         notificationDate,
         details,
         androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-        uiLocalNotificationDateInterpretation:
-            UILocalNotificationDateInterpretation.absoluteTime,
-        matchDateTimeComponents: null, // One-time notification
       );
 
       return true;

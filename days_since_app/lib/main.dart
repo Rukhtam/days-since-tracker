@@ -138,20 +138,46 @@ class _AppInitializerState extends State<AppInitializer> {
   }
 
   Future<void> _initializeApp() async {
-    // Give providers time to initialize
-    await Future.delayed(const Duration(milliseconds: 100));
-
     if (!mounted) return;
 
     final settings = context.read<SettingsProvider>();
     final itemsProvider = context.read<TrackedItemsProvider>();
 
+    // Wait for SettingsProvider to be fully initialized before checking isFirstLaunch
+    // This prevents race conditions where the Hive box is not yet open
+    int waitAttempts = 0;
+    const maxWaitAttempts = 50; // Max 5 seconds (50 * 100ms)
+    while (!settings.isInitialized && waitAttempts < maxWaitAttempts) {
+      await Future.delayed(const Duration(milliseconds: 100));
+      waitAttempts++;
+      if (!mounted) return;
+    }
+
+    if (!settings.isInitialized) {
+      debugPrint('AppInitializer: SettingsProvider failed to initialize after ${maxWaitAttempts * 100}ms');
+      return;
+    }
+
+    debugPrint('AppInitializer: SettingsProvider initialized, isFirstLaunch=${settings.isFirstLaunch}');
+
     // Request notification permissions on first launch
     if (settings.isFirstLaunch) {
+      debugPrint('AppInitializer: First launch detected, requesting notification permissions');
       final notificationService = NotificationService();
-      final granted = await notificationService.requestPermissions();
-      debugPrint('Notification permissions granted: $granted');
-      settings.markFirstLaunchComplete();
+
+      // Use the detailed permission request to get actual result
+      final result = await notificationService.requestPermissionsWithStatus();
+      debugPrint('AppInitializer: Permission request result: $result');
+
+      // Only mark first launch complete if we actually showed the dialog or got a definitive answer
+      // Do NOT mark complete if the service was not initialized (dialog never showed)
+      if (result != PermissionRequestResult.notInitialized &&
+          result != PermissionRequestResult.error) {
+        settings.markFirstLaunchComplete();
+        debugPrint('AppInitializer: Marked first launch complete');
+      } else {
+        debugPrint('AppInitializer: NOT marking first launch complete due to permission request failure');
+      }
     }
 
     // Schedule notifications for all items if enabled
