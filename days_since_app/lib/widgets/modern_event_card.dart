@@ -467,7 +467,10 @@ class _ModernEventCardState extends State<ModernEventCard>
                 HapticService.mediumImpact();
               }
               context.read<TrackedItemsProvider>().deleteItem(widget.item.id);
-              ScaffoldMessenger.of(context).showSnackBar(
+              final messenger = ScaffoldMessenger.of(context);
+              // Clear any existing snackbars to prevent stacking when performing rapid operations
+              messenger.clearSnackBars();
+              messenger.showSnackBar(
                 SnackBar(
                   content: Text('${widget.item.name} deleted'),
                   behavior: SnackBarBehavior.floating,

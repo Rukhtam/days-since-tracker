@@ -71,13 +71,17 @@ class _EditItemDialogState extends State<EditItemDialog> {
     final success = await provider.updateItem(updatedItem);
 
     if (mounted) {
+      final messenger = ScaffoldMessenger.of(context);
+      // Clear any existing snackbars to prevent stacking when performing rapid operations
+      messenger.clearSnackBars();
+
       if (success) {
         Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(
+        messenger.showSnackBar(
           SnackBar(content: Text('${_nameController.text} updated')),
         );
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
+        messenger.showSnackBar(
           SnackBar(
             content: Text(provider.error ?? 'Failed to update item'),
             backgroundColor: AppColors.error,

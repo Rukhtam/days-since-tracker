@@ -66,13 +66,17 @@ class _AddItemDialogState extends State<AddItemDialog> {
     );
 
     if (mounted) {
+      final messenger = ScaffoldMessenger.of(context);
+      // Clear any existing snackbars to prevent stacking when performing rapid operations
+      messenger.clearSnackBars();
+
       if (success) {
         Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(
+        messenger.showSnackBar(
           SnackBar(content: Text('${_nameController.text} added')),
         );
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
+        messenger.showSnackBar(
           SnackBar(
             content: Text(provider.error ?? 'Failed to add item'),
             backgroundColor: AppColors.error,

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
 
 import '../providers/settings_provider.dart';
@@ -16,12 +17,23 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObserver {
   bool _notificationsPermissionGranted = false;
+  String _appVersion = '';
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _checkNotificationPermissions();
+    _loadAppVersion();
+  }
+
+  Future<void> _loadAppVersion() async {
+    final packageInfo = await PackageInfo.fromPlatform();
+    if (mounted) {
+      setState(() {
+        _appVersion = packageInfo.version;
+      });
+    }
   }
 
   @override
@@ -395,7 +407,9 @@ class _SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObse
         ListTile(
           leading: Icon(Icons.info_outline, color: theme.colorScheme.primary),
           title: const Text('About Days Since'),
-          subtitle: const Text('Version 1.0.0'),
+          subtitle: Text(
+            _appVersion.isNotEmpty ? 'Version $_appVersion' : 'Version ...',
+          ),
           onTap: () => _showAboutDialog(context),
         ),
       ],
@@ -601,9 +615,9 @@ class _SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObse
     TrackedItemsProvider provider,
   ) {
     if (provider.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('No items to delete')));
+      final messenger = ScaffoldMessenger.of(context);
+      messenger.clearSnackBars();
+      messenger.showSnackBar(const SnackBar(content: Text('No items to delete')));
       return;
     }
 
@@ -630,7 +644,9 @@ class _SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObse
               // Cancel all notifications
               await NotificationService().cancelAllNotifications();
               if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
+                final messenger = ScaffoldMessenger.of(context);
+                messenger.clearSnackBars();
+                messenger.showSnackBar(
                   const SnackBar(content: Text('All items deleted')),
                 );
               }
@@ -668,7 +684,9 @@ class _SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObse
               Navigator.pop(context);
               await settings.resetToDefaults();
               if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
+                final messenger = ScaffoldMessenger.of(context);
+                messenger.clearSnackBars();
+                messenger.showSnackBar(
                   const SnackBar(content: Text('Settings reset to defaults')),
                 );
               }
@@ -689,7 +707,7 @@ class _SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObse
     showAboutDialog(
       context: context,
       applicationName: 'Days Since',
-      applicationVersion: '1.0.0',
+      applicationVersion: _appVersion.isNotEmpty ? _appVersion : '...',
       applicationIcon: Container(
         width: 48,
         height: 48,

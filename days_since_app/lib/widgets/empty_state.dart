@@ -217,7 +217,10 @@ class EmptyState extends StatelessWidget {
 
     // Show success feedback
     if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      final messenger = ScaffoldMessenger.of(context);
+      // Clear any existing snackbars to prevent stacking when performing rapid operations
+      messenger.clearSnackBars();
+      messenger.showSnackBar(
         SnackBar(
           content: Text('$label added successfully!'),
           duration: const Duration(seconds: 2),

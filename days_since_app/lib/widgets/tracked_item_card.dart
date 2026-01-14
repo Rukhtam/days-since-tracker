@@ -328,9 +328,10 @@ class TrackedItemCard extends StatelessWidget {
             onPressed: () {
               Navigator.pop(context);
               context.read<TrackedItemsProvider>().deleteItem(item.id);
-              ScaffoldMessenger.of(
-                context,
-              ).showSnackBar(SnackBar(content: Text('${item.name} deleted')));
+              final messenger = ScaffoldMessenger.of(context);
+              // Clear any existing snackbars to prevent stacking when performing rapid operations
+              messenger.clearSnackBars();
+              messenger.showSnackBar(SnackBar(content: Text('${item.name} deleted')));
             },
             style: TextButton.styleFrom(foregroundColor: AppColors.error),
             child: const Text('Delete'),
