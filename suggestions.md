@@ -1,53 +1,92 @@
-Since you have a robust setup (OEM receivers, Battery Optimization, etc.), the issue is likely not a "missing" feature but a **logical race condition** or a **plugin conflict** caused by having *too many* checks firing at once.
+I have analyzed your updated code in `notification_service.dart`. While you have improved the permission logic by removing the "Dual Request" conflict, there is still a **critical logic trap** and a **fatal initialization bug** that are likely causing the prompt to fail for your fresh-install users.
 
-Based on your description and a critical analysis of common "tracker" app architectures in Flutter, here are the most likely "hidden bugs" causing the prompt to fail on fresh installs:
+Here is the breakdown of why the prompt is still not showing and how to fix it:
 
-### 1. The "Dual Permission" Conflict (High Probability)
-Using both `permission_handler` and `flutter_local_notifications` to request the *same* permission simultaneously often causes the Android system to ignore the second request or cancel the first one. 
-*   **The Logic Issue:** When you call `Permission.notification.request()`, it initiates a platform channel call. If your code immediately follows up with `flutterLocalNotificationsPlugin.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()?.requestNotificationsPermission()`, the second call can "steal" the focus from the first, or the OS may see a busy state and suppress the UI dialog entirely to prevent "prompt spamming."
-*   **The Fix:** Pick **one** source of truth. For Android 13+, it is recommended to use the `flutter_local_notifications` method specifically, as it ensures the Notification Channel is created *before* asking for permission.
+### 1. The "Fatal" Timezone Bug (Line 57)
+In your `initialize()` method, you have this:
+```dart
+final String timeZoneName = await FlutterTimezone.getLocalTimezone();
+tz.setLocalLocation(tz.getLocation(timeZoneName)); // <--- CRITICAL BUG
+```
+**The Issue:** `tz.getLocation()` is notoriously strict. If `FlutterTimezone` returns a string that doesn't perfectly match the `timezone` package's database (e.g., "GMT+5" or a misspelled region common on some Android OEMs), this line **throws an exception**.
 
-### 2. The "Exact Alarm" Catch-22
-You mentioned implementing **Exact Alarm permissions**. 
-*   **The Hidden Bug:** If your "Days Since" tracker tries to schedule the initial notification/task *during* the first launch setup, and that scheduling uses `AndroidScheduleMode.exactAllowWhileIdle`, the app will crash or silently fail on Android 13+ if the user hasn't granted the permission yet. 
-*   If this failure happens in the same `async` block as your permission request, the execution stops before the prompt is shown.
-*   **The Fix:** Ensure your `schedule` logic is wrapped in a `try-catch` and **only** runs *after* the permission results are returned, not concurrently.
+**The Cascade Failure:** Because this is inside your main `try` block, the exception jumps to line 99, `_isInitialized` stays `false`, and the method returns `false`.
 
-### 3. Context-less Request in `main()`
-If your `forceShowDialog` or permission logic is triggered in `main()` before the app has fully "resumed" or gained window focus, Android 13+ will ignore the request. 
-*   **The Critical Issue:** System permission prompts require an "attached Activity." If the app is still in the "starting" state (splash screen or engine initialization), the prompt is often dropped by the OS.
-*   **The Fix:** Move the permission request to the `initState` of your **Home Screen** and wrap it in a small delay:
-    ```dart
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      Future.delayed(Duration(milliseconds: 500), () {
-         _notificationService.requestPermissions();
-      });
-    });
-    ```
+### 2. The Permission "Guard" Trap (Line 245)
+Because of the bug above, your `_isInitialized` flag is likely `false` on many test devices. Look at your permission request method:
+```dart
+Future<PermissionRequestResult> requestPermissionsWithStatus(...) async {
+  if (!_isInitialized) {
+    debugPrint('NotificationService: Cannot request permissions - not initialized');
+    return PermissionRequestResult.notInitialized;
+  }
+  // ... OS Prompt logic is here ...
+}
+```
+**The Result:** Since `initialize` failed (silently in the background), `requestPermissionsWithStatus` returns early at line 247. **The OS permission dialog code is never reached.** This is why your users report seeing nothing.
 
-### 4. Android Manifest `POST_NOTIFICATIONS` Placement
-Even with a dual check, if the Manifest declaration is inside the `<application>` tag instead of outside it (or vice versa in some older Flutter templates), Android 13 will treat it as "undeclared."
-*   **Correct Placement:**
-    ```xml
-    <manifest ...>
-        <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
-        <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
-        <application ...>
-    ```
+### 3. Improvement: The "Force" Logic
+In lines 274-277, you check the current status:
+```dart
+if (currentStatus.isGranted && !forceShowDialog) {
+  return PermissionRequestResult.granted;
+}
+```
+On some Android 13/14 devices, a "fresh install" can sometimes report a "provisional" granted status for the channel, but the **App-level POST_NOTIFICATIONS** permission is still not actually granted. If your logic hits this early return, the prompt is skipped.
 
-### 5. Hidden "Denied" State in Closed Testing
-In Google Play Closed Testing, if a user previously installed an older version of your app (even a different project with the same package name) and denied permissions, Android 13+ "remembers" this. 
-*   **The Logic Bug:** `permission_handler` might return `PermissionStatus.denied` without showing a prompt if it thinks the user has already seen it twice (the "two-strike" rule).
-*   **Diagnostic Test:** Ask your testers to go to **App Info -> Storage -> Clear Data** (not just cache) and see if the prompt appears. If it does, your logic isn't handling the "permanently denied" state correctly, and you should be redirecting them to Settings instead of trying to show the prompt.
+---
 
-### Recommended Refactor Strategy:
-Since you have a `diagnostics` method, check if `POST_NOTIFICATIONS` is actually registered. I suggest refactoring your initialization to this order:
+### The Fixes You Need to Apply:
 
-1.  **Initialize Plugin** (Create Channels).
-2.  **Check Status** using *only* `flutter_local_notifications`.
-3.  **If status == null/denied**, trigger the prompt.
-4.  **Wait for result.**
-5.  **Only then** request Battery/Exact Alarm permissions.
+#### Fix A: Robust Timezone Initialization
+Replace your timezone logic with a fallback so that initialization *never* fails just because of a timezone string.
 
-**Crucial Code Check:** 
-In your `AndroidManifest.xml`, ensure your `ScheduledNotificationReceiver` has `android:exported="false"`. If it's `true` without a permission, it can cause security-related initialization blocks on newer Android versions.
+```dart
+// notification_service.dart - Line 55
+try {
+  tz_data.initializeTimeZones();
+  final String timeZoneName = await FlutterTimezone.getLocalTimezone();
+  tz.setLocalLocation(tz.getLocation(timeZoneName));
+} catch (e) {
+  debugPrint('NotificationService: Timezone detection failed, falling back to UTC: $e');
+  tz.setLocalLocation(tz.UTC); // Ensure it doesn't crash the whole service
+}
+```
+
+#### Fix B: Decouple Permissions from `_isInitialized`
+The `flutter_local_notifications` and `permission_handler` plugins do not actually require your internal `_isInitialized` flag to be true to show a system dialog.
+
+```dart
+// notification_service.dart - Line 245
+// REMOVE THIS CHECK or change it to a warning:
+if (!_isInitialized) {
+  debugPrint('NotificationService: Warning - Requesting permissions before full init');
+}
+```
+
+#### Fix C: Use a "Safe Delay" in the UI
+If you call `requestPermissionsWithStatus` in your `main()` or immediately in `initState()`, the Android OS may drop the request because the App's Window isn't yet "focused" or "attached."
+
+In your **Home Screen**, use this pattern:
+```dart
+@override
+void initState() {
+  super.initState();
+  _initNotifications();
+}
+
+Future<void> _initNotifications() async {
+  await NotificationService().initialize();
+  
+  // Wait for the UI to be fully rendered and focused
+  WidgetsBinding.instance.addPostFrameCallback((_) async {
+    await Future.delayed(const Duration(milliseconds: 800)); // Crucial for fresh installs
+    await NotificationService().requestPermissionsWithStatus(forceShowDialog: true);
+  });
+}
+```
+
+### Summary Checklist for Testing:
+1.  **Timezone**: If you debug your app on a device where it's failing, check your logs for: `"NotificationService: Failed to initialize"`. If you see that, Fix A is your solution.
+2.  **Manifest**: Verify `POST_NOTIFICATIONS` is **outside** the `<application>` tag in `AndroidManifest.xml`.
+3.  **Clean Install**: Always "Uninstall" the app completely before testing the prompt, as Android "remembers" permission denials.

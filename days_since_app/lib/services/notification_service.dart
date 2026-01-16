@@ -51,11 +51,22 @@ class NotificationService {
     if (_isInitialized) return true;
 
     try {
-      // Initialize timezone database and set local timezone
+      // Initialize timezone database
       tz_data.initializeTimeZones();
-      final String timeZoneName = await FlutterTimezone.getLocalTimezone();
-      tz.setLocalLocation(tz.getLocation(timeZoneName));
-      debugPrint('NotificationService: Timezone set to $timeZoneName');
+
+      // Set local timezone with fallback to UTC
+      // IMPORTANT: tz.getLocation() can throw if the timezone string doesn't match
+      // the database exactly. This would cause _isInitialized to stay false,
+      // preventing permission dialogs from ever being shown.
+      // See: suggestions.md - "Fatal Timezone Bug (Fix A)"
+      try {
+        final String timeZoneName = await FlutterTimezone.getLocalTimezone();
+        tz.setLocalLocation(tz.getLocation(timeZoneName));
+        debugPrint('NotificationService: Timezone set to $timeZoneName');
+      } catch (tzError) {
+        debugPrint('NotificationService: Timezone detection failed, falling back to UTC: $tzError');
+        tz.setLocalLocation(tz.UTC);
+      }
 
       // Android initialization settings
       const androidSettings = AndroidInitializationSettings(_androidIcon);
@@ -250,9 +261,14 @@ class NotificationService {
   Future<PermissionRequestResult> requestPermissionsWithStatus({
     bool forceShowDialog = false,
   }) async {
+    // NOTE: We intentionally do NOT block on _isInitialized here.
+    // The permission dialog can (and should) be shown even if notification
+    // scheduling failed to initialize (e.g., due to timezone issues).
+    // Only scheduling operations need _isInitialized to be true.
+    // See: suggestions.md - "Decouple Permissions from _isInitialized (Fix B)"
     if (!_isInitialized) {
-      debugPrint('NotificationService: Cannot request permissions - not initialized');
-      return PermissionRequestResult.notInitialized;
+      debugPrint('NotificationService: Warning - Requesting permissions before full init (this is OK)');
+      // Continue anyway - permission dialog can still be shown
     }
 
     try {
