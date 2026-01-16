@@ -134,7 +134,16 @@ class _AppInitializerState extends State<AppInitializer> {
   @override
   void initState() {
     super.initState();
-    _initializeApp();
+    // CRITICAL: Wait for Activity to be fully attached and have window focus
+    // Android 13+ will ignore permission requests if the Activity isn't ready
+    // See: suggestions.md - "Context-less Request in main()"
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Future.delayed(const Duration(milliseconds: 500), () {
+        if (mounted) {
+          _initializeApp();
+        }
+      });
+    });
   }
 
   Future<void> _initializeApp() async {
@@ -160,13 +169,39 @@ class _AppInitializerState extends State<AppInitializer> {
 
     debugPrint('AppInitializer: SettingsProvider initialized, isFirstLaunch=${settings.isFirstLaunch}');
 
+    // Get the NotificationService instance
+    final notificationService = NotificationService();
+
+    // Verify NotificationService is initialized before proceeding
+    if (!notificationService.isInitialized) {
+      debugPrint('AppInitializer: NotificationService not initialized, waiting...');
+      // Wait a bit more for notification service to initialize
+      int nsWaitAttempts = 0;
+      const maxNsWaitAttempts = 30; // Max 3 seconds
+      while (!notificationService.isInitialized && nsWaitAttempts < maxNsWaitAttempts) {
+        await Future.delayed(const Duration(milliseconds: 100));
+        nsWaitAttempts++;
+        if (!mounted) return;
+      }
+
+      if (!notificationService.isInitialized) {
+        debugPrint('AppInitializer: NotificationService failed to initialize, skipping permission request');
+        return;
+      }
+    }
+
+    debugPrint('AppInitializer: NotificationService.isInitialized = ${notificationService.isInitialized}');
+
     // Request notification permissions on first launch
     if (settings.isFirstLaunch) {
       debugPrint('AppInitializer: First launch detected, requesting notification permissions');
-      final notificationService = NotificationService();
 
-      // Use the detailed permission request to get actual result
-      final result = await notificationService.requestPermissionsWithStatus();
+      // IMPORTANT: Use forceShowDialog=true on first launch
+      // This ensures we try to show the system permission dialog on Android 13+
+      // even if permission_handler incorrectly reports permission as "granted"
+      final result = await notificationService.requestPermissionsWithStatus(
+        forceShowDialog: true,
+      );
       debugPrint('AppInitializer: Permission request result: $result');
 
       // Only mark first launch complete if we actually showed the dialog or got a definitive answer
@@ -181,13 +216,28 @@ class _AppInitializerState extends State<AppInitializer> {
     }
 
     // Schedule notifications for all items if enabled
+    // IMPORTANT: Wrap in try-catch to prevent exact alarm failures from
+    // crashing the app or stopping execution before permission dialog shows
+    // See: suggestions.md - "Exact Alarm Catch-22"
     if (settings.notificationsEnabled) {
-      final items = itemsProvider.items;
-      await NotificationService().updateAllNotifications(
-        items,
-        notificationHour: settings.notificationTimeHour,
-        notificationMinute: settings.notificationTimeMinute,
-      );
+      try {
+        // Verify permission was actually granted before scheduling
+        final hasPermission = await notificationService.areNotificationsEnabled();
+        if (hasPermission) {
+          final items = itemsProvider.items;
+          await notificationService.updateAllNotifications(
+            items,
+            notificationHour: settings.notificationTimeHour,
+            notificationMinute: settings.notificationTimeMinute,
+          );
+          debugPrint('AppInitializer: Notifications scheduled successfully');
+        } else {
+          debugPrint('AppInitializer: Skipping notification scheduling - permission not granted');
+        }
+      } catch (e) {
+        // Don't let scheduling failures crash the app or block initialization
+        debugPrint('AppInitializer: Error scheduling notifications - $e');
+      }
     }
   }
 

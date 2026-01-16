@@ -241,36 +241,109 @@ class NotificationService {
     }
   }
 
-  /// Request permission and return detailed status for better handling
-  Future<PermissionRequestResult> requestPermissionsWithStatus() async {
+  /// Request permission and return detailed status for better handling.
+  /// On Android 13+ (API 33+), this will show the system permission dialog.
+  /// On older Android versions, permissions are granted by default at install time.
+  ///
+  /// [forceShowDialog] - If true, always attempt to show the dialog on Android 13+,
+  /// even if permission_handler reports "granted" (which can be unreliable on first launch).
+  Future<PermissionRequestResult> requestPermissionsWithStatus({
+    bool forceShowDialog = false,
+  }) async {
     if (!_isInitialized) {
+      debugPrint('NotificationService: Cannot request permissions - not initialized');
       return PermissionRequestResult.notInitialized;
     }
 
     try {
-      // First check current status
-      final currentStatus = await Permission.notification.status;
-      debugPrint('NotificationService: Current status before request = $currentStatus');
-      
-      if (currentStatus.isGranted) {
-        return PermissionRequestResult.granted;
-      }
-      
-      if (currentStatus.isPermanentlyDenied) {
-        return PermissionRequestResult.permanentlyDenied;
+      // Check Android version - permission dialog only needed on Android 13+ (API 33+)
+      if (Platform.isAndroid) {
+        // Try to get the SDK version to determine if we need the permission dialog
+        final androidPlugin = _notifications
+            .resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin
+            >();
+
+        // First, check current permission status
+        final currentStatus = await Permission.notification.status;
+        debugPrint('NotificationService: Current permission status = $currentStatus');
+
+        // On Android 12 and below, POST_NOTIFICATIONS permission doesn't exist
+        // The permission_handler may return "granted" by default
+        // We still try to request to ensure the system dialog appears on Android 13+
+
+        if (currentStatus.isPermanentlyDenied) {
+          debugPrint('NotificationService: Permission permanently denied, user must enable in settings');
+          return PermissionRequestResult.permanentlyDenied;
+        }
+
+        // IMPORTANT: On fresh install, we should ALWAYS try to request permission
+        // The "granted" status may be incorrect on Android 13+ before the dialog is shown
+        // The forceShowDialog flag allows us to bypass the early return
+        if (currentStatus.isGranted && !forceShowDialog) {
+          debugPrint('NotificationService: Permission already granted');
+          return PermissionRequestResult.granted;
+        }
+
+        // Request permission - this should show the system dialog on Android 13+
+        debugPrint('NotificationService: Requesting notification permission...');
+
+        // Use flutter_local_notifications plugin method for Android
+        // This is more reliable than permission_handler on some devices
+        if (androidPlugin != null) {
+          final granted = await androidPlugin.requestNotificationsPermission();
+          debugPrint('NotificationService: FLN permission result = $granted');
+
+          if (granted == true) {
+            return PermissionRequestResult.granted;
+          }
+
+          // Double-check with permission_handler
+          final postRequestStatus = await Permission.notification.status;
+          debugPrint('NotificationService: Post-request status = $postRequestStatus');
+
+          if (postRequestStatus.isGranted) {
+            return PermissionRequestResult.granted;
+          } else if (postRequestStatus.isPermanentlyDenied) {
+            return PermissionRequestResult.permanentlyDenied;
+          } else {
+            return PermissionRequestResult.denied;
+          }
+        }
+
+        // NOTE: Removed fallback to Permission.notification.request()
+        // Using both permission_handler and flutter_local_notifications simultaneously
+        // can cause the Android system to ignore/cancel permission dialogs
+        // See: suggestions.md - "Dual Permission Conflict"
+        debugPrint('NotificationService: Android plugin not available, assuming older device');
+        return PermissionRequestResult.granted; // Older Android versions don't need permission
+
+      } else if (Platform.isIOS) {
+        // iOS permission request
+        final currentStatus = await Permission.notification.status;
+        debugPrint('NotificationService: iOS current status = $currentStatus');
+
+        if (currentStatus.isGranted) {
+          return PermissionRequestResult.granted;
+        }
+
+        if (currentStatus.isPermanentlyDenied) {
+          return PermissionRequestResult.permanentlyDenied;
+        }
+
+        final result = await Permission.notification.request();
+        debugPrint('NotificationService: iOS permission result = $result');
+
+        if (result.isGranted) {
+          return PermissionRequestResult.granted;
+        } else if (result.isPermanentlyDenied) {
+          return PermissionRequestResult.permanentlyDenied;
+        } else {
+          return PermissionRequestResult.denied;
+        }
       }
 
-      // Request permission
-      final result = await Permission.notification.request();
-      debugPrint('NotificationService: Permission request result = $result');
-      
-      if (result.isGranted) {
-        return PermissionRequestResult.granted;
-      } else if (result.isPermanentlyDenied) {
-        return PermissionRequestResult.permanentlyDenied;
-      } else {
-        return PermissionRequestResult.denied;
-      }
+      return PermissionRequestResult.granted; // Default for other platforms
     } catch (e) {
       debugPrint('NotificationService: Error requesting permission - $e');
       return PermissionRequestResult.error;

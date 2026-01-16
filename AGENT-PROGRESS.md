@@ -1237,10 +1237,147 @@ git commit -m "Enhance notification robustness for all Android versions and OEM 
 
 ---
 
+## Day 8 - January 14, 2026
+
+### ✅ Completed Tasks
+
+#### 1. Notification Package Upgrade (18.x → 19.x)
+- [x] Upgraded `flutter_local_notifications` from `^18.0.1` to `^19.0.0`
+- [x] Removed deprecated `uiLocalNotificationDateInterpretation` parameter from `zonedSchedule()` call
+- [x] Updated desugaring library from `2.0.4` to `2.1.4` in `build.gradle.kts`
+- [x] All notifications continue to work correctly with the new API
+
+#### 2. First Launch Notification Permission Bug Fix
+- [x] **Issue**: Users not getting notification permission prompt on first app launch
+- [x] **Root Cause 1**: Race condition - only 100ms wait before checking `isFirstLaunch`
+- [x] **Root Cause 2**: `markFirstLaunchComplete()` called unconditionally
+- [x] **Fix Applied**:
+  - Wait up to 5 seconds (50 attempts × 100ms) for SettingsProvider to initialize
+  - Only mark first launch complete if dialog was actually shown successfully
+  - Check for `PermissionRequestResult.notInitialized` and `PermissionRequestResult.error` before marking complete
+
+#### 3. Dynamic Version Display
+- [x] **Issue**: Settings screen showed hardcoded "1.0.0" instead of actual version
+- [x] Added `package_info_plus: ^8.0.0` dependency
+- [x] Updated `settings_screen.dart` to fetch version dynamically using `PackageInfo.fromPlatform()`
+- [x] Now displays correct version (e.g., "1.0.5") from `pubspec.yaml`
+
+#### 4. Duplicate Snackbar Bug Fix
+- [x] **Issue**: Toast/snackbar messages appearing twice when adding/deleting items rapidly
+- [x] **Root Cause**: SnackBars queuing up without clearing previous ones
+- [x] **Fix Applied**: Added `messenger.clearSnackBars()` before each `showSnackBar()` call
+- [x] **Files Fixed**:
+  - `lib/widgets/add_item_dialog.dart`
+  - `lib/widgets/edit_item_dialog.dart`
+  - `lib/widgets/modern_event_card.dart`
+  - `lib/widgets/tracked_item_card.dart`
+  - `lib/widgets/empty_state.dart`
+  - `lib/screens/settings_screen.dart`
+
+#### 5. Minimum Android Version Confirmed
+- [x] Verified via flux agent: **minSdk = 24 (Android 7.0 Nougat)**
+- [x] Device coverage: ~97-98% of active Android devices
+- [x] Note: `min_sdk_android: 21` in pubspec.yaml only affects icon generation
+
+#### 6. Release Build
+- [x] Version bumped to `1.0.5+6` in `pubspec.yaml`
+- [x] Release AAB built successfully at `build/app/outputs/bundle/release/app-release.aab` (41.9MB)
+- [x] Changes committed and pushed to GitHub
+
+---
+
+### 📊 Files Modified
+
+| File | Changes |
+|------|---------|
+| `pubspec.yaml` | Version 1.0.5+6, flutter_local_notifications ^19.0.0, package_info_plus ^8.0.0 |
+| `lib/services/notification_service.dart` | Removed deprecated zonedSchedule parameters |
+| `lib/main.dart` | Fixed race condition with 5-second timeout, conditional markFirstLaunchComplete |
+| `lib/screens/settings_screen.dart` | Dynamic version display, clearSnackBars fix |
+| `lib/widgets/add_item_dialog.dart` | clearSnackBars fix |
+| `lib/widgets/edit_item_dialog.dart` | clearSnackBars fix |
+| `lib/widgets/modern_event_card.dart` | clearSnackBars fix |
+| `lib/widgets/tracked_item_card.dart` | clearSnackBars fix |
+| `lib/widgets/empty_state.dart` | clearSnackBars fix |
+| `android/app/build.gradle.kts` | desugar_jdk_libs 2.1.4 |
+
+---
+
+### 🐛 Bugs Fixed
+
+1. **Notification Permission Prompt Missing**: Users not seeing permission dialog on first launch due to race condition
+2. **Hardcoded Version**: Settings showed "1.0.0" instead of actual app version
+3. **Duplicate Snackbars**: Toast messages appearing twice when performing rapid actions
+
+---
+
+### 📦 Dependencies Updated
+
+| Package | Before | After |
+|---------|--------|-------|
+| `flutter_local_notifications` | ^18.0.1 | ^19.0.0 |
+| `package_info_plus` | (new) | ^8.0.0 |
+| `desugar_jdk_libs` | 2.0.4 | 2.1.4 |
+
+---
+
+### 📱 Platform Support Confirmation
+
+| Setting | Value |
+|---------|-------|
+| **minSdk** | 24 |
+| **Android Version** | Android 7.0 (Nougat) |
+| **compileSdk** | 36 |
+| **targetSdk** | 36 |
+| **Device Coverage** | ~97-98% |
+
+---
+
+### 📝 Release Notes (v1.0.5)
+
+```
+Bug Fixes & Improvements:
+• Fixed notification permission prompt not appearing on first launch
+• Fixed duplicate popup messages when quickly adding or deleting items
+• Settings screen now shows correct app version dynamically
+• Improved overall app stability and responsiveness
+
+Thank you for your feedback! Keep tracking those important moments.
+```
+
+---
+
+### Git Commits (Day 8)
+
+```bash
+# Commit 1: Bug fixes and version display
+git commit -m "Fix duplicate snackbar bug and add dynamic version display"
+
+# AAB built and ready for Play Store upload
+```
+
+---
+
+### Day 8 Achievements
+
+🏆 **Upgraded to flutter_local_notifications 19.x!**
+🏆 **Fixed first launch notification permission bug!**
+🏆 **Dynamic version display implemented!**
+🏆 **Duplicate snackbar bug eliminated!**
+🏆 **Release AAB v1.0.5+6 built and ready!**
+🏆 **Confirmed 97-98% Android device coverage!**
+
+---
+
+**Last Updated**: January 14, 2026
+**Status**: v1.0.5+6 ready for Play Store
+
+---
+
 **Next Steps**:
-- Continue monitoring tester feedback on v1.0.2+3
-- Upload v1.0.3+4 with full OEM support once v1.0.2 is verified
+- Upload v1.0.5+6 AAB to Play Console
+- Continue monitoring closed testing feedback
 - Complete 14-day closed testing period
-- Prepare production release
+- Prepare for production release (Target: January 25, 2026)
 
 ---
