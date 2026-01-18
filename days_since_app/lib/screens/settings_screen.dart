@@ -16,7 +16,12 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObserver {
-  bool _notificationsPermissionGranted = false;
+  // Use nullable bool to track permission state:
+  // - null = not yet checked (loading)
+  // - true = permission granted
+  // - false = permission denied
+  // This prevents UI flicker during async permission check
+  bool? _notificationsPermissionGranted;
   String _appVersion = '';
 
   @override
@@ -62,13 +67,13 @@ class _SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObse
   /// Check permissions and auto-enable notifications if permission was just granted
   Future<void> _checkNotificationPermissionsAndUpdate() async {
     final enabled = await NotificationService().areNotificationsEnabled();
-    final wasGranted = _notificationsPermissionGranted;
-    
+    final wasGranted = _notificationsPermissionGranted == true;
+
     if (mounted) {
       setState(() {
         _notificationsPermissionGranted = enabled;
       });
-      
+
       // If permission was just granted (wasn't before, is now)
       // and user has notifications enabled in app settings,
       // reschedule all notifications
@@ -194,23 +199,39 @@ class _SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObse
     // Use orange/amber for warning color that works in both themes
     const warningColor = Color(0xFFFF9800);
 
+    // Determine effective permission state:
+    // - null (loading): treat as true to avoid flicker
+    // - true: granted
+    // - false: denied
+    final hasPermission = _notificationsPermissionGranted ?? true;
+    final permissionChecked = _notificationsPermissionGranted != null;
+
     return Column(
       children: [
         // Master notification toggle
+        // IMPORTANT: The toggle value should ONLY reflect the saved setting,
+        // not the permission status. Permission status affects the subtitle
+        // and action handling, but not the displayed toggle state.
+        // This prevents the race condition where async permission check
+        // causes the toggle to briefly show the wrong state.
         SwitchListTile(
           title: const Text('Enable Notifications'),
           subtitle: Text(
-            _notificationsPermissionGranted
-                ? 'Get reminded when items are due'
-                : 'Permission required',
+            // Only show warning after permission check completes and shows denied
+            !hasPermission && settings.notificationsEnabled && permissionChecked
+                ? 'Permission required to send notifications'
+                : hasPermission
+                    ? 'Get reminded when items are due'
+                    : 'Permission required',
             style: TextStyle(
-              color: _notificationsPermissionGranted
-                  ? theme.textTheme.bodyMedium?.color
-                  : warningColor,
+              color: !hasPermission && settings.notificationsEnabled && permissionChecked
+                  ? warningColor
+                  : hasPermission
+                      ? theme.textTheme.bodyMedium?.color
+                      : warningColor,
             ),
           ),
-          value:
-              settings.notificationsEnabled && _notificationsPermissionGranted,
+          value: settings.notificationsEnabled,
           onChanged: (value) async {
             if (value) {
               // User is trying to enable notifications
@@ -267,24 +288,24 @@ class _SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObse
             _hapticFeedback(settings);
           },
           secondary: Icon(
-            settings.notificationsEnabled && _notificationsPermissionGranted
+            settings.notificationsEnabled
                 ? Icons.notifications_active
                 : Icons.notifications_off,
-            color:
-                settings.notificationsEnabled && _notificationsPermissionGranted
-                ? colorScheme.primary
+            color: settings.notificationsEnabled
+                ? (hasPermission
+                    ? colorScheme.primary
+                    : warningColor) // Show warning color if enabled but no permission
                 : theme.iconTheme.color?.withValues(alpha: 0.5),
           ),
         ),
 
         // Notification time picker
+        // Only enable when notifications are ON and permission is granted
         ListTile(
-          enabled:
-              settings.notificationsEnabled && _notificationsPermissionGranted,
+          enabled: settings.notificationsEnabled && hasPermission,
           leading: Icon(
             Icons.access_time,
-            color:
-                settings.notificationsEnabled && _notificationsPermissionGranted
+            color: settings.notificationsEnabled && hasPermission
                 ? colorScheme.primary
                 : theme.iconTheme.color?.withValues(alpha: 0.5),
           ),
