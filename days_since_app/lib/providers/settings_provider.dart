@@ -54,7 +54,11 @@ class SettingsProvider extends ChangeNotifier {
   }
 
   set notificationsEnabled(bool value) {
-    _box?.put(_keyNotificationsEnabled, value);
+    if (_box == null) {
+      debugPrint('SettingsProvider WARNING: notificationsEnabled set before initialization - value will not persist');
+      return;
+    }
+    _box!.put(_keyNotificationsEnabled, value);
     notifyListeners();
   }
 
@@ -66,7 +70,11 @@ class SettingsProvider extends ChangeNotifier {
 
   set notificationTimeHour(int value) {
     if (value >= 0 && value <= 23) {
-      _box?.put(_keyNotificationTime, value);
+      if (_box == null) {
+        debugPrint('SettingsProvider WARNING: notificationTimeHour set before initialization - value will not persist');
+        return;
+      }
+      _box!.put(_keyNotificationTime, value);
       notifyListeners();
     }
   }
@@ -79,7 +87,11 @@ class SettingsProvider extends ChangeNotifier {
 
   set notificationTimeMinute(int value) {
     if (value >= 0 && value <= 59) {
-      _box?.put(_keyNotificationMinute, value);
+      if (_box == null) {
+        debugPrint('SettingsProvider WARNING: notificationTimeMinute set before initialization - value will not persist');
+        return;
+      }
+      _box!.put(_keyNotificationMinute, value);
       notifyListeners();
     }
   }
@@ -91,8 +103,12 @@ class SettingsProvider extends ChangeNotifier {
 
   /// Set notification time from TimeOfDay
   set notificationTime(TimeOfDay time) {
-    _box?.put(_keyNotificationTime, time.hour);
-    _box?.put(_keyNotificationMinute, time.minute);
+    if (_box == null) {
+      debugPrint('SettingsProvider WARNING: notificationTime set before initialization - value will not persist');
+      return;
+    }
+    _box!.put(_keyNotificationTime, time.hour);
+    _box!.put(_keyNotificationMinute, time.minute);
     notifyListeners();
   }
 
@@ -121,7 +137,11 @@ class SettingsProvider extends ChangeNotifier {
 
   set sortOrder(String value) {
     if (['status', 'days', 'name', 'recent'].contains(value)) {
-      _box?.put(_keySortOrder, value);
+      if (_box == null) {
+        debugPrint('SettingsProvider WARNING: sortOrder set before initialization - value will not persist');
+        return;
+      }
+      _box!.put(_keySortOrder, value);
       notifyListeners();
     }
   }
@@ -161,6 +181,10 @@ class SettingsProvider extends ChangeNotifier {
   }
 
   set themeMode(AppThemeMode value) {
+    if (_box == null) {
+      debugPrint('SettingsProvider WARNING: themeMode set before initialization - value will not persist');
+      return;
+    }
     String stringValue;
     switch (value) {
       case AppThemeMode.light:
@@ -173,7 +197,7 @@ class SettingsProvider extends ChangeNotifier {
         stringValue = 'dark';
         break;
     }
-    _box?.put(_keyThemeMode, stringValue);
+    _box!.put(_keyThemeMode, stringValue);
     notifyListeners();
   }
 
@@ -209,7 +233,11 @@ class SettingsProvider extends ChangeNotifier {
   }
 
   set showCompletedFirst(bool value) {
-    _box?.put(_keyShowCompletedFirst, value);
+    if (_box == null) {
+      debugPrint('SettingsProvider WARNING: showCompletedFirst set before initialization - value will not persist');
+      return;
+    }
+    _box!.put(_keyShowCompletedFirst, value);
     notifyListeners();
   }
 
@@ -219,7 +247,11 @@ class SettingsProvider extends ChangeNotifier {
   }
 
   set hapticFeedbackEnabled(bool value) {
-    _box?.put(_keyHapticFeedback, value);
+    if (_box == null) {
+      debugPrint('SettingsProvider WARNING: hapticFeedbackEnabled set before initialization - value will not persist');
+      return;
+    }
+    _box!.put(_keyHapticFeedback, value);
     notifyListeners();
   }
 
@@ -229,7 +261,11 @@ class SettingsProvider extends ChangeNotifier {
   }
 
   set confirmBeforeReset(bool value) {
-    _box?.put(_keyConfirmReset, value);
+    if (_box == null) {
+      debugPrint('SettingsProvider WARNING: confirmBeforeReset set before initialization - value will not persist');
+      return;
+    }
+    _box!.put(_keyConfirmReset, value);
     notifyListeners();
   }
 
@@ -241,7 +277,11 @@ class SettingsProvider extends ChangeNotifier {
   }
 
   void markFirstLaunchComplete() {
-    _box?.put(_keyFirstLaunch, false);
+    if (_box == null) {
+      debugPrint('SettingsProvider WARNING: markFirstLaunchComplete called before initialization - value will not persist');
+      return;
+    }
+    _box!.put(_keyFirstLaunch, false);
     notifyListeners();
   }
 
@@ -251,7 +291,11 @@ class SettingsProvider extends ChangeNotifier {
   }
 
   void markOnboardingComplete() {
-    _box?.put(_keyOnboardingComplete, true);
+    if (_box == null) {
+      debugPrint('SettingsProvider WARNING: markOnboardingComplete called before initialization - value will not persist');
+      return;
+    }
+    _box!.put(_keyOnboardingComplete, true);
     notifyListeners();
   }
 
