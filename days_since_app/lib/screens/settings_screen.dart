@@ -189,6 +189,58 @@ class _SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObse
     }
   }
 
+  /// Get the subtitle text for the notification toggle based on current state.
+  ///
+  /// Logic:
+  /// - Toggle OFF: "Enable to receive reminders" (neutral)
+  /// - Toggle ON + permission loading: "Get reminded when items are due" (neutral)
+  /// - Toggle ON + permission granted: "Get reminded when items are due" (neutral)
+  /// - Toggle ON + permission denied: "Permission required to send notifications" (warning)
+  String _getNotificationSubtitle({
+    required bool toggleEnabled,
+    required bool hasPermission,
+    required bool permissionChecked,
+  }) {
+    if (!toggleEnabled) {
+      // Toggle is OFF - show neutral message encouraging to enable
+      return 'Enable to receive reminders';
+    }
+
+    // Toggle is ON
+    if (!permissionChecked) {
+      // Still loading permission status - show neutral message
+      return 'Get reminded when items are due';
+    }
+
+    if (hasPermission) {
+      // Permission granted - show confirmation message
+      return 'Get reminded when items are due';
+    }
+
+    // Permission denied - show warning
+    return 'Permission required to send notifications';
+  }
+
+  /// Get the subtitle color for the notification toggle based on current state.
+  ///
+  /// Only shows warning color when toggle is ON AND permission is explicitly denied.
+  Color? _getNotificationSubtitleColor({
+    required bool toggleEnabled,
+    required bool hasPermission,
+    required bool permissionChecked,
+    required Color warningColor,
+    required Color? normalColor,
+  }) {
+    // Only show warning color if:
+    // 1. Toggle is ON (user wants notifications)
+    // 2. Permission check has completed (not loading)
+    // 3. Permission was denied
+    if (toggleEnabled && permissionChecked && !hasPermission) {
+      return warningColor;
+    }
+    return normalColor;
+  }
+
   /// Build notification-related settings
   Widget _buildNotificationSettings(
     BuildContext context,
@@ -217,18 +269,20 @@ class _SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObse
         SwitchListTile(
           title: const Text('Enable Notifications'),
           subtitle: Text(
-            // Only show warning after permission check completes and shows denied
-            !hasPermission && settings.notificationsEnabled && permissionChecked
-                ? 'Permission required to send notifications'
-                : hasPermission
-                    ? 'Get reminded when items are due'
-                    : 'Permission required',
+            // Determine subtitle text based on toggle state and permission
+            _getNotificationSubtitle(
+              toggleEnabled: settings.notificationsEnabled,
+              hasPermission: hasPermission,
+              permissionChecked: permissionChecked,
+            ),
             style: TextStyle(
-              color: !hasPermission && settings.notificationsEnabled && permissionChecked
-                  ? warningColor
-                  : hasPermission
-                      ? theme.textTheme.bodyMedium?.color
-                      : warningColor,
+              color: _getNotificationSubtitleColor(
+                toggleEnabled: settings.notificationsEnabled,
+                hasPermission: hasPermission,
+                permissionChecked: permissionChecked,
+                warningColor: warningColor,
+                normalColor: theme.textTheme.bodyMedium?.color,
+              ),
             ),
           ),
           value: settings.notificationsEnabled,

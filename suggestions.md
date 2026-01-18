@@ -1,92 +1,109 @@
-I have analyzed your updated code in `notification_service.dart`. While you have improved the permission logic by removing the "Dual Request" conflict, there is still a **critical logic trap** and a **fatal initialization bug** that are likely causing the prompt to fail for your fresh-install users.
+I have reviewed your latest changes in `notification_service.dart`. You’ve fixed the timezone crash and added an auto-initialization check, which is a great step forward.
 
-Here is the breakdown of why the prompt is still not showing and how to fix it:
+However, I have found the **"Smoking Gun"**—the exact logic bug that is likely causing the notification prompt to fail or disappear on fresh installs, especially on Android 13 and 14.
 
-### 1. The "Fatal" Timezone Bug (Line 57)
-In your `initialize()` method, you have this:
+### The Critical Bug: The "Exact Alarm" Intent Conflict
+In your `requestPermissionsWithStatus` method (around line 285-300), you have this logic:
+
 ```dart
-final String timeZoneName = await FlutterTimezone.getLocalTimezone();
-tz.setLocalLocation(tz.getLocation(timeZoneName)); // <--- CRITICAL BUG
-```
-**The Issue:** `tz.getLocation()` is notoriously strict. If `FlutterTimezone` returns a string that doesn't perfectly match the `timezone` package's database (e.g., "GMT+5" or a misspelled region common on some Android OEMs), this line **throws an exception**.
+// 1. You trigger the notification permission dialog
+final bool? granted = await _notifications
+    .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+    ?.requestNotificationsPermission();
 
-**The Cascade Failure:** Because this is inside your main `try` block, the exception jumps to line 99, `_isInitialized` stays `false`, and the method returns `false`.
+// 2. IMMEDIATELY after, you check for Exact Alarm permission
+if (Platform.isAndroid && (await _isAndroid12OrHigher())) {
+  final bool canSchedule = await _notifications
+      .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+      ?.canScheduleExactNotifications() ?? false;
 
-### 2. The Permission "Guard" Trap (Line 245)
-Because of the bug above, your `_isInitialized` flag is likely `false` on many test devices. Look at your permission request method:
-```dart
-Future<PermissionRequestResult> requestPermissionsWithStatus(...) async {
-  if (!_isInitialized) {
-    debugPrint('NotificationService: Cannot request permissions - not initialized');
-    return PermissionRequestResult.notInitialized;
+  if (!canSchedule) {
+    // 3. THIS IS THE BUG
+    await openExactAlarmSetting(); 
   }
-  // ... OS Prompt logic is here ...
 }
 ```
-**The Result:** Since `initialize` failed (silently in the background), `requestPermissionsWithStatus` returns early at line 247. **The OS permission dialog code is never reached.** This is why your users report seeing nothing.
 
-### 3. Improvement: The "Force" Logic
-In lines 274-277, you check the current status:
-```dart
-if (currentStatus.isGranted && !forceShowDialog) {
-  return PermissionRequestResult.granted;
-}
-```
-On some Android 13/14 devices, a "fresh install" can sometimes report a "provisional" granted status for the channel, but the **App-level POST_NOTIFICATIONS** permission is still not actually granted. If your logic hits this early return, the prompt is skipped.
+**Why this fails on fresh installs:**
+1.  When you call `requestNotificationsPermission()`, the Android system **starts** to show the "Allow Notifications" dialog.
+2.  Because that call is asynchronous, your code immediately moves to the next line.
+3.  On a fresh install, `canSchedule` will be `false`.
+4.  Your code then calls `openExactAlarmSetting()`, which fires an `Intent` to **open the System Settings app**.
+5.  **The Conflict:** On Android, opening a new Activity (Settings) while a system permission dialog is trying to pop up will often **dismiss or suppress** the permission dialog instantly. The user is whisked away to the "Alarm & Reminders" settings page before they ever see the "Allow Notifications" prompt.
 
 ---
 
-### The Fixes You Need to Apply:
+### Other Hidden Issues Found:
 
-#### Fix A: Robust Timezone Initialization
-Replace your timezone logic with a fallback so that initialization *never* fails just because of a timezone string.
+#### 1. The `bool? granted` variable is ignored
+At line 279, you capture the result of the notification prompt in `granted`, but you never use it. The function continues regardless of whether the user clicked "Allow" or "Deny," and then tries to open the Alarm settings.
 
-```dart
-// notification_service.dart - Line 55
-try {
-  tz_data.initializeTimeZones();
-  final String timeZoneName = await FlutterTimezone.getLocalTimezone();
-  tz.setLocalLocation(tz.getLocation(timeZoneName));
-} catch (e) {
-  debugPrint('NotificationService: Timezone detection failed, falling back to UTC: $e');
-  tz.setLocalLocation(tz.UTC); // Ensure it doesn't crash the whole service
-}
-```
+#### 2. `Permission.notification.status` vs FLN
+You are still checking `Permission.notification.status` at the start. On some Android 13/14 devices, if the app hasn't declared the permission correctly in `AndroidManifest.xml` (or if there's a cached state from a previous debug install), `permission_handler` can return `PermissionStatus.denied` and "Permanently Denied" logic might trigger prematurely.
 
-#### Fix B: Decouple Permissions from `_isInitialized`
-The `flutter_local_notifications` and `permission_handler` plugins do not actually require your internal `_isInitialized` flag to be true to show a system dialog.
+---
+
+### The Recommended Fix (Refactored Logic)
+
+You need to **sequence** these requests. Never ask for the second permission until the first one is finished.
+
+**Replace your `requestPermissionsWithStatus` logic with this:**
 
 ```dart
-// notification_service.dart - Line 245
-// REMOVE THIS CHECK or change it to a warning:
-if (!_isInitialized) {
-  debugPrint('NotificationService: Warning - Requesting permissions before full init');
-}
-```
+Future<PermissionRequestResult> requestPermissionsWithStatus({
+  bool forceShowDialog = false,
+}) async {
+  if (!_isInitialized) {
+    await initialize();
+  }
 
-#### Fix C: Use a "Safe Delay" in the UI
-If you call `requestPermissionsWithStatus` in your `main()` or immediately in `initState()`, the Android OS may drop the request because the App's Window isn't yet "focused" or "attached."
-
-In your **Home Screen**, use this pattern:
-```dart
-@override
-void initState() {
-  super.initState();
-  _initNotifications();
-}
-
-Future<void> _initNotifications() async {
-  await NotificationService().initialize();
+  // 1. Handle Notification Permission FIRST
+  PermissionStatus status = await Permission.notification.status;
   
-  // Wait for the UI to be fully rendered and focused
-  WidgetsBinding.instance.addPostFrameCallback((_) async {
-    await Future.delayed(const Duration(milliseconds: 800)); // Crucial for fresh installs
-    await NotificationService().requestPermissionsWithStatus(forceShowDialog: true);
-  });
+  if (status.isDenied || forceShowDialog) {
+    // Request notification permission and WAIT for it
+    final bool? granted = await _notifications
+        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+        ?.requestNotificationsPermission();
+    
+    // If they just dealt with the dialog, refresh the status
+    status = await Permission.notification.status;
+  }
+
+  if (status.isPermanentlyDenied) {
+    return PermissionRequestResult.permanentlyDenied;
+  }
+
+  // 2. ONLY AFTER notification permission is handled, check Exact Alarms
+  if (Platform.isAndroid && (await _isAndroid12OrHigher())) {
+    final androidPlugin = _notifications.resolvePlatformSpecificImplementation<
+                AndroidFlutterLocalNotificationsPlugin>();
+    
+    final bool canSchedule = await androidPlugin?.canScheduleExactNotifications() ?? false;
+
+    if (!canSchedule) {
+      // Optional: Show a custom dialog explaining WHY you are sending them to settings
+      // before calling openExactAlarmSetting();
+      await androidPlugin?.requestExactAlarmsPermission(); 
+    }
+  }
+
+  return status.isGranted 
+      ? PermissionRequestResult.granted 
+      : PermissionRequestResult.denied;
 }
 ```
 
-### Summary Checklist for Testing:
-1.  **Timezone**: If you debug your app on a device where it's failing, check your logs for: `"NotificationService: Failed to initialize"`. If you see that, Fix A is your solution.
-2.  **Manifest**: Verify `POST_NOTIFICATIONS` is **outside** the `<application>` tag in `AndroidManifest.xml`.
-3.  **Clean Install**: Always "Uninstall" the app completely before testing the prompt, as Android "remembers" permission denials.
+### One Final "Play Store" Gotcha:
+Since you are in Closed Testing, ensure your `AndroidManifest.xml` has this exact line **directly under the `<manifest>` tag** and NOT inside the `<application>` tag:
+
+```xml
+<uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+```
+
+**Why this matters:** If it's inside the `<application>` tag, it's ignored. If it's ignored, `requestNotificationsPermission()` will return `false` immediately without showing a dialog.
+
+### Summary Checklist for your next commit:
+1.  **Sequence the prompts:** Wait for the Notification result before checking/triggering the Exact Alarm intent.
+2.  **Verify Manifest:** Ensure `POST_NOTIFICATIONS` is in the right place.
+3.  **UI Delay:** In your `main.dart` or `home_screen.dart`, ensure you call this method inside a `WidgetsBinding.instance.addPostFrameCallback` with a 500ms delay. System dialogs often fail to appear if the app hasn't finished its first "paint" cycle.

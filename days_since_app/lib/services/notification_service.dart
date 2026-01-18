@@ -143,12 +143,15 @@ class NotificationService {
 
   /// Request notification permissions from the user.
   /// Returns true if permissions were granted.
+  /// 
+  /// NOTE: This method should work even if initialization failed, as requesting
+  /// permission is independent of the notification scheduling system.
   Future<bool> requestPermissions() async {
+    // Log a warning if not initialized, but don't block the permission request
     if (!_isInitialized) {
       debugPrint(
-        'NotificationService: Not initialized, cannot request permissions',
+        'NotificationService: Warning - requesting permissions before full init (continuing anyway)',
       );
-      return false;
     }
 
     try {
@@ -194,8 +197,16 @@ class NotificationService {
   /// Check if notifications are permitted using multiple methods for reliability.
   /// Uses both permission_handler and flutter_local_notifications as fallback.
   /// This handles edge cases on Android 14+/16 with One UI 8.
+  /// 
+  /// NOTE: This method does NOT depend on _isInitialized because checking
+  /// permissions is independent of the notification scheduling system.
+  /// Users should see accurate permission status even if initialization failed.
   Future<bool> areNotificationsEnabled() async {
-    if (!_isInitialized) return false;
+    // IMPORTANT: Do NOT check _isInitialized here!
+    // Permission checking is independent of notification scheduling initialization.
+    // The old code returned false when !_isInitialized, causing the UI to show
+    // "Permission required" even when the user had granted permission.
+    // See: Bug report - "Permission required shown even when toggle is enabled"
 
     try {
       // Method 1: Use permission_handler (preferred)
@@ -205,12 +216,18 @@ class NotificationService {
       // Method 2: Use flutter_local_notifications as fallback/verification
       bool? flnEnabled;
       if (Platform.isAndroid) {
-        final androidPlugin = _notifications
-            .resolvePlatformSpecificImplementation<
-              AndroidFlutterLocalNotificationsPlugin
-            >();
-        if (androidPlugin != null) {
-          flnEnabled = await androidPlugin.areNotificationsEnabled();
+        // Try to get the android plugin - this may work even if full init failed
+        try {
+          final androidPlugin = _notifications
+              .resolvePlatformSpecificImplementation<
+                AndroidFlutterLocalNotificationsPlugin
+              >();
+          if (androidPlugin != null) {
+            flnEnabled = await androidPlugin.areNotificationsEnabled();
+          }
+        } catch (pluginError) {
+          debugPrint('NotificationService: Android plugin check failed - $pluginError');
+          // Continue with permission_handler result only
         }
       }
       debugPrint('NotificationService: flutter_local_notifications enabled = $flnEnabled');
@@ -489,6 +506,7 @@ class NotificationService {
   }
 
   /// Schedule a notification for a tracked item when it reaches 90% of interval.
+  /// Also schedules a "smart reminder" 1 day before the interval expires.
   /// The notification is scheduled at the specified hour and minute on the target date.
   /// [notificationHour] should be 0-23 (defaults to 9 for 9:00 AM)
   /// [notificationMinute] should be 0-59 (defaults to 0)
@@ -498,15 +516,46 @@ class NotificationService {
     int notificationMinute = 0,
   }) async {
     if (!_isInitialized) {
+      debugPrint('NotificationService: Cannot schedule - not initialized');
       return false;
     }
 
     if (!item.notificationsEnabled) {
-      // Cancel any existing notification for this item
+      // Cancel any existing notifications for this item
       await cancelItemNotification(item.id);
+      await _cancelSmartReminder(item.id);
       return true;
     }
 
+    try {
+      // Schedule the main 90% notification
+      final mainResult = await _scheduleMainNotification(
+        item,
+        notificationHour: notificationHour,
+        notificationMinute: notificationMinute,
+      );
+      
+      // Schedule the smart reminder (1 day before due)
+      await _scheduleSmartReminder(
+        item,
+        notificationHour: notificationHour,
+        notificationMinute: notificationMinute,
+      );
+      
+      return mainResult;
+    } catch (e, stackTrace) {
+      debugPrint('NotificationService: Failed to schedule notifications for "${item.name}" - $e');
+      debugPrint('NotificationService: Stack trace - $stackTrace');
+      return false;
+    }
+  }
+
+  /// Schedule the main notification at 90% of interval
+  Future<bool> _scheduleMainNotification(
+    TrackedItem item, {
+    required int notificationHour,
+    required int notificationMinute,
+  }) async {
     try {
       // Calculate when to send the notification (at 90% of interval)
       final notificationDate = _calculateNotificationDate(
@@ -567,31 +616,48 @@ class NotificationService {
         androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
       );
 
+      debugPrint(
+        'NotificationService: Scheduled notification for "${item.name}" at $notificationDate',
+      );
       return true;
-    } catch (e) {
+    } catch (e, stackTrace) {
+      debugPrint(
+        'NotificationService: Failed to schedule notification for "${item.name}" - $e',
+      );
+      debugPrint('NotificationService: Stack trace - $stackTrace');
       return false;
     }
   }
 
   /// Cancel a scheduled notification for a tracked item.
+  /// Also cancels any smart reminder for this item.
   Future<void> cancelItemNotification(String itemId) async {
-    if (!_isInitialized) return;
+    if (!_isInitialized) {
+      debugPrint('NotificationService: Cannot cancel - not initialized');
+      return;
+    }
 
     try {
       await _notifications.cancel(_getNotificationId(itemId));
+      await _cancelSmartReminder(itemId);
+      debugPrint('NotificationService: Cancelled all notifications for item $itemId');
     } catch (e) {
-      // Silently fail
+      debugPrint('NotificationService: Failed to cancel notification for $itemId - $e');
     }
   }
 
   /// Cancel all scheduled notifications.
   Future<void> cancelAllNotifications() async {
-    if (!_isInitialized) return;
+    if (!_isInitialized) {
+      debugPrint('NotificationService: Cannot cancel all - not initialized');
+      return;
+    }
 
     try {
       await _notifications.cancelAll();
+      debugPrint('NotificationService: Cancelled all notifications');
     } catch (e) {
-      // Silently fail
+      debugPrint('NotificationService: Failed to cancel all notifications - $e');
     }
   }
 
@@ -739,6 +805,114 @@ class NotificationService {
     } else {
       final dueLabel = daysUntilDue == 1 ? 'day' : 'days';
       return 'It has been $daysSince $daysSinceLabel. Due in $daysUntilDue $dueLabel.';
+    }
+  }
+
+  // ============================================================
+  // SMART REMINDER METHODS
+  // Notify user 1 day before the interval expires (100% mark)
+  // ============================================================
+
+  /// Generate a unique notification ID for smart reminders
+  /// Uses a different hash to avoid conflicts with main notifications
+  int _getSmartReminderId(String itemId) {
+    return ('smart_$itemId').hashCode.abs() % 2147483647;
+  }
+
+  /// Schedule a "smart reminder" notification 1 day before the interval expires.
+  /// This gives users a heads-up before items become overdue.
+  Future<bool> _scheduleSmartReminder(
+    TrackedItem item, {
+    required int notificationHour,
+    required int notificationMinute,
+  }) async {
+    try {
+      // Only schedule if interval is > 1 day (otherwise 90% notification is enough)
+      if (item.recommendedIntervalDays <= 1) {
+        return true;
+      }
+
+      // Calculate 1 day before the interval expires
+      final daysUntilDue = item.daysUntilDue;
+      
+      // If already due or less than 1 day away, don't schedule
+      if (daysUntilDue <= 1) {
+        return true;
+      }
+
+      final now = tz.TZDateTime.now(tz.local);
+      final smartReminderDate = tz.TZDateTime(
+        tz.local,
+        now.year,
+        now.month,
+        now.day + daysUntilDue - 1, // 1 day before due
+        notificationHour,
+        notificationMinute,
+        0,
+      );
+
+      // Don't schedule if the time has already passed
+      if (smartReminderDate.isBefore(now)) {
+        return true;
+      }
+
+      final androidDetails = AndroidNotificationDetails(
+        _channelId,
+        _channelName,
+        channelDescription: _channelDescription,
+        importance: Importance.high,
+        priority: Priority.high,
+        icon: _androidIcon,
+        styleInformation: BigTextStyleInformation(
+          '${item.name} is due tomorrow! It has been ${item.daysSinceReset + daysUntilDue - 1} days.',
+          contentTitle: '⏰ ${item.name} - Due Tomorrow',
+        ),
+        actions: [
+          const AndroidNotificationAction(
+            'reset_action',
+            'Reset Now',
+            showsUserInterface: true,
+          ),
+        ],
+      );
+
+      const iosDetails = DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: true,
+        presentSound: true,
+      );
+
+      final details = NotificationDetails(
+        android: androidDetails,
+        iOS: iosDetails,
+      );
+
+      await _notifications.zonedSchedule(
+        _getSmartReminderId(item.id),
+        '⏰ ${item.name} - Due Tomorrow',
+        '${item.name} is due tomorrow! Take action before it becomes overdue.',
+        smartReminderDate,
+        details,
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      );
+
+      debugPrint(
+        'NotificationService: Scheduled smart reminder for "${item.name}" at $smartReminderDate',
+      );
+      return true;
+    } catch (e) {
+      debugPrint('NotificationService: Failed to schedule smart reminder for "${item.name}" - $e');
+      return false;
+    }
+  }
+
+  /// Cancel a smart reminder notification
+  Future<void> _cancelSmartReminder(String itemId) async {
+    try {
+      await _notifications.cancel(_getSmartReminderId(itemId));
+      debugPrint('NotificationService: Cancelled smart reminder for item $itemId');
+    } catch (e) {
+      debugPrint('NotificationService: Failed to cancel smart reminder - $e');
     }
   }
 
