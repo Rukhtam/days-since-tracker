@@ -1580,15 +1580,218 @@ Get notified one day before your tracked items are due — so you never miss the
 
 ---
 
-**Last Updated**: January 18, 2026
-**Status**: v1.0.11+12 ready for Play Store
+## Day 10 - January 20, 2026
+
+### 🎯 Session Focus
+OEM battery optimization detection and dontkillmyapp.com integration based on Samsung tester feedback.
+
+---
+
+### ✅ Completed Tasks
+
+#### 1. Samsung Notification Issue Diagnosis
+- [x] Analyzed diagnostic report from Samsung Galaxy S9 / Android 10 tester
+- [x] Identified root cause: Battery Optimization enabled = notifications killed by OS
+- [x] Confirmed notifications work after user disables battery optimization
+
+**Diagnostic Findings:**
+| Check | Result |
+|-------|--------|
+| Total Items | 1 ✅ |
+| Pending Notifications | 1 ✅ |
+| Battery Optimization Disabled | false ❌ (cause of issue) |
+| Notification Permission | Granted ✅ |
+
+---
+
+#### 2. dontkillmyapp.com Research
+- [x] Researched aggressive OEM battery management practices
+- [x] Identified 13+ OEMs with documented notification-killing behavior
+- [x] Found device-specific fix guides on dontkillmyapp.com
+
+**OEM "Badness" Rankings (from dontkillmyapp.com):**
+| OEM | Score | Key Issues |
+|-----|-------|------------|
+| Samsung | 5/5 | Sleeping apps (3-day kill), Adaptive battery, Deep sleeping |
+| Xiaomi | 5/5 | MIUI aggressive battery saver |
+| Huawei | 5/5 | EMUI app killing |
+| OnePlus | 4/5 | OxygenOS battery optimization |
+| OPPO | 4/5 | ColorOS restrictions |
+| Vivo | 4/5 | FuntouchOS background limits |
+| Realme | 4/5 | Same as OPPO |
+| Meizu | 4/5 | Flyme OS |
+| Asus | 3/5 | ROG/ZenUI power management |
+| Lenovo | 3/5 | Power saver modes |
+| Nokia | 3/5 | DuraSpeed (HMD Global) |
+| Tecno | 3/5 | HiOS battery management |
+| Infinix | 3/5 | XOS battery management |
+
+---
+
+#### 3. OEM Battery Warning Banner (v1.0.17+18 → v1.0.18+19)
+- [x] Created OEM detection system using `device_info_plus`
+- [x] Added warning banner to home screen for 13 aggressive OEMs
+- [x] Implemented "Fix Now" button → Opens system battery settings
+- [x] Implemented "Learn More" button → Opens device-specific dontkillmyapp.com guide
+- [x] Implemented "Dismiss" button (only shown after user acknowledges)
+- [x] Banner re-checks on app resume via `WidgetsBindingObserver`
+- [x] Banner auto-hides when battery optimization is disabled
+
+**OEM Detection & Links:**
+```dart
+final oemGuideUrls = {
+  'samsung': 'https://dontkillmyapp.com/samsung',
+  'xiaomi': 'https://dontkillmyapp.com/xiaomi',
+  'huawei': 'https://dontkillmyapp.com/huawei',
+  'oneplus': 'https://dontkillmyapp.com/oneplus',
+  'oppo': 'https://dontkillmyapp.com/oppo',
+  'vivo': 'https://dontkillmyapp.com/vivo',
+  'realme': 'https://dontkillmyapp.com/realme',
+  'meizu': 'https://dontkillmyapp.com/meizu',
+  'asus': 'https://dontkillmyapp.com/asus',
+  'lenovo': 'https://dontkillmyapp.com/lenovo',
+  'nokia': 'https://dontkillmyapp.com/nokia',
+  'tecno': 'https://dontkillmyapp.com/tecno',
+  'infinix': 'https://dontkillmyapp.com/infinix',
+};
+```
+
+---
+
+#### 4. Enhanced Diagnostic Report
+- [x] Added OEM-specific warnings to diagnostics
+- [x] Added tracked items section with calculated notification dates
+- [x] Added "Share Diagnostics" button in Settings → About
+- [x] Report now includes:
+  - App version
+  - Android version
+  - Device manufacturer/model
+  - All permission statuses
+  - Battery optimization status
+  - Each tracked item with days since & notification schedule
+  - OEM-specific fix instructions
+
+---
+
+### 📊 Files Modified
+
+| File | Changes |
+|------|---------|
+| `lib/screens/home_screen.dart` | OEM detection, warning banner with 3 action buttons, app resume listener |
+| `lib/screens/settings_screen.dart` | Share diagnostics feature, OEM-specific warnings in report |
+| `pubspec.yaml` | Version 1.0.18+19, added device_info_plus, share_plus, url_launcher |
+
+---
+
+### 📦 Dependencies Added
+
+| Package | Version | Purpose |
+|---------|---------|---------|
+| `device_info_plus` | ^11.0.0 | Detect device manufacturer/brand |
+| `share_plus` | ^10.0.0 | Share diagnostic reports |
+| `url_launcher` | ^6.2.5 | Open dontkillmyapp.com links |
+
+---
+
+### 🔧 Key Technical Insights (from dontkillmyapp.com)
+
+1. **No Developer-Side Solution**: Apps cannot programmatically bypass OEM battery restrictions
+2. **User Action Required**: Must guide users to manually disable battery optimization
+3. **Samsung-Specific Issues**:
+   - Sleeping apps: Apps unused for 3 days get killed
+   - Adaptive battery: Learns and restricts "unused" apps
+   - Deep sleeping apps: Complete background execution block
+   - May re-add apps to sleep list after firmware updates
+4. **Best Practice**: Show proactive warning banner with direct links to fix guides
+
+---
+
+### 🎨 Warning Banner UI
+
+```
+┌──────────────────────────────────────────────────────┐
+│ ⚠️ Samsung devices may block notifications           │
+│    Fix this in your battery settings                 │
+│                                                      │
+│  [Fix Now]  [Learn More]  [Dismiss]                  │
+└──────────────────────────────────────────────────────┘
+```
+
+**Banner Behavior:**
+- Shows on Android only (not iOS)
+- Detects 13 aggressive OEMs
+- Checks battery optimization status
+- Auto-hides when fixed
+- Re-checks on app resume
+- Can be dismissed (persists until fixed)
+
+---
+
+### ✅ Testing Results
+
+| Device | Android | Issue | After Fix |
+|--------|---------|-------|-----------|
+| Samsung Galaxy S9 | 10 | Notifications killed | ✅ Works |
+| (Verified by closed tester) | | | |
+
+---
+
+### 📝 Release Notes (v1.0.18)
+
+```
+What's New
+
+🔋 Smart Battery Warning
+- Detects Samsung, Xiaomi, and 11 other OEMs with aggressive battery management
+- Shows helpful banner with "Fix Now" and "Learn More" buttons
+- Links directly to device-specific guides on dontkillmyapp.com
+
+📊 Enhanced Diagnostics
+- Share detailed diagnostic reports from Settings
+- Includes all tracked items with notification schedules
+- Device-specific troubleshooting info
+
+This update helps ensure your reminders always reach you!
+```
+
+---
+
+### Git Status
+
+```
+Changes to be committed:
+  new file:   agent-progress.md (to be removed)
+  modified:   lib/screens/home_screen.dart
+  modified:   lib/screens/settings_screen.dart
+  modified:   pubspec.yaml
+  modified:   pubspec.lock
+  + platform plugin registrants
+```
+
+---
+
+### Day 10 Achievements
+
+🏆 **Diagnosed Samsung notification issue from tester feedback!**
+🏆 **Researched dontkillmyapp.com for OEM best practices!**
+🏆 **Implemented OEM detection for 13 manufacturers!**
+🏆 **Created warning banner with "Fix Now" and "Learn More" buttons!**
+🏆 **Integrated device-specific dontkillmyapp.com guides!**
+🏆 **Enhanced diagnostic report with tracked items!**
+🏆 **Version 1.0.18+19 ready for release!**
+
+---
+
+**Last Updated**: January 20, 2026
+**Status**: v1.0.18+19 ready for Play Store
 
 ---
 
 **Next Steps**:
-- Upload v1.0.11+12 AAB to Play Console
-- Monitor tester feedback for permission fix confirmation
+- Commit changes (staged, ready to commit)
+- Push to GitHub
+- Upload AAB to Play Console
+- Monitor tester feedback on OEM warning effectiveness
 - Continue closed testing
-- Prepare for production release
 
 ---

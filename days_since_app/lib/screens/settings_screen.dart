@@ -1,6 +1,10 @@
+import 'dart:io';
+
+import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../providers/settings_provider.dart';
 import '../providers/tracked_items_provider.dart';
@@ -487,6 +491,12 @@ class _SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObse
           ),
           onTap: () => _showAboutDialog(context),
         ),
+        ListTile(
+          leading: Icon(Icons.bug_report_outlined, color: theme.colorScheme.primary),
+          title: const Text('Share Diagnostics'),
+          subtitle: const Text('Send debug info for troubleshooting'),
+          onTap: () => _shareDiagnostics(context),
+        ),
       ],
     );
   }
@@ -774,6 +784,183 @@ class _SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObse
         ],
       ),
     );
+  }
+
+  /// Share diagnostics information for troubleshooting
+  Future<void> _shareDiagnostics(BuildContext context) async {
+    // Show loading indicator
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: CircularProgressIndicator(),
+      ),
+    );
+
+    try {
+      // Gather all diagnostic information
+      final notificationDiagnostics =
+          await NotificationService().getNotificationDiagnostics();
+      final packageInfo = await PackageInfo.fromPlatform();
+      final settings = context.read<SettingsProvider>();
+      final itemsProvider = context.read<TrackedItemsProvider>();
+
+      // Get device info
+      String deviceInfo = '';
+      final deviceInfoPlugin = DeviceInfoPlugin();
+
+      if (Platform.isAndroid) {
+        final androidInfo = await deviceInfoPlugin.androidInfo;
+        deviceInfo = '''
+📱 Device: ${androidInfo.manufacturer} ${androidInfo.model}
+🤖 Android: ${androidInfo.version.release} (SDK ${androidInfo.version.sdkInt})
+🔧 Brand: ${androidInfo.brand}
+🏭 Product: ${androidInfo.product}''';
+      } else if (Platform.isIOS) {
+        final iosInfo = await deviceInfoPlugin.iosInfo;
+        deviceInfo = '''
+📱 Device: ${iosInfo.name}
+ iOS: ${iosInfo.systemVersion}
+🔧 Model: ${iosInfo.model}
+🏭 Identifier: ${iosInfo.utsname.machine}''';
+      }
+
+      // Get pending notifications
+      final pendingNotifications =
+          await NotificationService().getPendingNotifications();
+      final pendingList = pendingNotifications
+          .take(5)
+          .map((n) => '  • ID: ${n.id}, Title: ${n.title}')
+          .join('\n');
+
+      // Build item details with calculated notification dates
+      final itemDetailsList = itemsProvider.items.take(10).map((item) {
+        final daysUntil90Pct = (item.recommendedIntervalDays * 0.9).floor() - item.daysSinceReset;
+        String notifyStatus;
+        if (!item.notificationsEnabled) {
+          notifyStatus = 'Disabled';
+        } else if (daysUntil90Pct <= 0) {
+          notifyStatus = 'NOW (${item.percentageElapsed.toStringAsFixed(0)}% elapsed)';
+        } else {
+          final notifyDate = DateTime.now().add(Duration(days: daysUntil90Pct));
+          notifyStatus = '${notifyDate.year}-${notifyDate.month.toString().padLeft(2, '0')}-${notifyDate.day.toString().padLeft(2, '0')} at ${settings.notificationTimeHour.toString().padLeft(2, '0')}:${settings.notificationTimeMinute.toString().padLeft(2, '0')}';
+        }
+        return '  • ${item.name}: ${item.daysSinceReset}d/${item.recommendedIntervalDays}d (${item.status.name}) → $notifyStatus';
+      }).join('\n');
+
+      // Detect aggressive OEM battery optimization issues
+      // Based on dontkillmyapp.com rankings
+      String oemWarning = '';
+      final deviceInfoLower = deviceInfo.toLowerCase();
+      final aggressiveOems = {
+        'samsung': 'dontkillmyapp.com/samsung',
+        'xiaomi': 'dontkillmyapp.com/xiaomi',
+        'huawei': 'dontkillmyapp.com/huawei',
+        'oneplus': 'dontkillmyapp.com/oneplus',
+        'oppo': 'dontkillmyapp.com/oppo',
+        'vivo': 'dontkillmyapp.com/vivo',
+        'realme': 'dontkillmyapp.com/realme',
+        'meizu': 'dontkillmyapp.com/meizu',
+        'asus': 'dontkillmyapp.com/asus',
+        'lenovo': 'dontkillmyapp.com/lenovo',
+        'nokia': 'dontkillmyapp.com/nokia',
+        'tecno': 'dontkillmyapp.com/tecno',
+        'infinix': 'dontkillmyapp.com/infinix',
+      };
+      
+      for (final entry in aggressiveOems.entries) {
+        if (deviceInfoLower.contains(entry.key) && 
+            notificationDiagnostics['batteryOptimizationDisabled'] == false) {
+          final oemName = entry.key[0].toUpperCase() + entry.key.substring(1);
+          oemWarning = '''
+
+⚠️ ${oemName.toUpperCase()} BATTERY ISSUE DETECTED
+───────────────────────────────────────
+Your $oemName device has battery optimization 
+ENABLED for this app. This WILL prevent 
+notifications from firing!
+
+FIX: Settings → Apps → Days Since → Battery
+     → Set to "Unrestricted"
+
+Also add this app to "Never sleeping apps"
+or equivalent for your device.
+
+See: ${entry.value}
+''';
+          break;
+        }
+      }
+
+      // Build the report
+      final report = '''
+═══════════════════════════════════════
+  DAYS SINCE - DIAGNOSTIC REPORT
+  Generated: ${DateTime.now().toIso8601String()}
+═══════════════════════════════════════
+
+📦 APP INFO
+───────────────────────────────────────
+Version: ${packageInfo.version} (Build ${packageInfo.buildNumber})
+Package: ${packageInfo.packageName}
+
+$deviceInfo
+
+⚙️ SETTINGS
+───────────────────────────────────────
+Theme: ${settings.themeModeDisplayName}
+Notifications Enabled: ${settings.notificationsEnabled}
+Notification Time: ${settings.notificationTimeHour.toString().padLeft(2, '0')}:${settings.notificationTimeMinute.toString().padLeft(2, '0')}
+Sort Order: ${settings.sortOrder}
+Haptic Feedback: ${settings.hapticFeedbackEnabled}
+
+📊 DATA
+───────────────────────────────────────
+Total Items: ${itemsProvider.items.length}
+First Launch Complete: ${!settings.isFirstLaunch}
+
+🔔 NOTIFICATION DIAGNOSTICS
+───────────────────────────────────────
+Initialized: ${notificationDiagnostics['isInitialized']}
+Permission Granted: ${notificationDiagnostics['notificationPermission']}
+Exact Alarm Permission: ${notificationDiagnostics['exactAlarmPermission'] ?? 'N/A'}
+Battery Optimization Disabled: ${notificationDiagnostics['batteryOptimizationDisabled'] ?? 'N/A'}
+Pending Notifications: ${notificationDiagnostics['pendingNotificationsCount'] ?? 0}
+Permission Handler Status: ${notificationDiagnostics['permissionHandlerStatus'] ?? 'N/A'}
+FLN Notifications Enabled: ${notificationDiagnostics['flnNotificationsEnabled'] ?? 'N/A'}
+$oemWarning
+📋 TRACKED ITEMS (First 10)
+───────────────────────────────────────
+${itemDetailsList.isNotEmpty ? itemDetailsList : '  (none)'}
+
+📋 PENDING NOTIFICATIONS (First 5)
+───────────────────────────────────────
+${pendingList.isNotEmpty ? pendingList : '  (none)'}
+
+═══════════════════════════════════════
+  END OF REPORT
+═══════════════════════════════════════
+''';
+
+      // Dismiss loading indicator
+      if (context.mounted) {
+        Navigator.pop(context);
+      }
+
+      // Share the report
+      await Share.share(
+        report,
+        subject: 'Days Since - Diagnostic Report',
+      );
+    } catch (e) {
+      // Dismiss loading indicator
+      if (context.mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error generating diagnostics: $e')),
+        );
+      }
+    }
   }
 
   /// Show about dialog

@@ -2,7 +2,7 @@ name: days_since_tracker
 description: "A minimal tracker app to monitor days since recurring events like haircuts, oil changes, and more."
 publish_to: 'none'
 
-version: 1.0.16+17
+version: 1.0.18+19
 
 environment:
   sdk: ^3.10.4
@@ -45,6 +45,15 @@ dependencies:
 
   # Package info for version display
   package_info_plus: ^8.0.0
+
+  # Device info for diagnostics
+  device_info_plus: ^11.0.0
+
+  # Share functionality for diagnostics
+  share_plus: ^10.0.0
+
+  # URL launcher for opening external links
+  url_launcher: ^6.2.5
 
 dev_dependencies:
   flutter_test:

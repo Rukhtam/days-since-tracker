@@ -1,11 +1,15 @@
+import 'dart:io';
+import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../constants/app_colors.dart';
 import '../providers/tracked_items_provider.dart';
 import '../providers/settings_provider.dart';
+import '../services/notification_service.dart';
 import '../widgets/modern_event_card.dart';
 import '../widgets/add_item_dialog.dart';
 import '../widgets/empty_state.dart';
@@ -22,6 +26,12 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   // Track when startup is complete to trigger ring animations
   bool _startupComplete = false;
+  
+  // OEM battery optimization warning
+  bool _showOemWarning = false;
+  bool _warningDismissed = false;
+  String _oemBrand = '';
+  String _oemGuideUrl = 'https://dontkillmyapp.com';
 
   @override
   void initState() {
@@ -37,7 +47,62 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           setState(() => _startupComplete = true);
         }
       });
+      // Check for aggressive OEM battery optimization issue
+      _checkOemBatteryOptimization();
     });
+  }
+  
+  /// Check if this is an aggressive OEM device with battery optimization enabled
+  /// Based on dontkillmyapp.com rankings
+  Future<void> _checkOemBatteryOptimization() async {
+    if (!Platform.isAndroid) return;
+    
+    try {
+      final deviceInfo = DeviceInfoPlugin();
+      final androidInfo = await deviceInfo.androidInfo;
+      final brand = androidInfo.brand.toLowerCase();
+      
+      // List of aggressive OEMs from dontkillmyapp.com
+      // Ranked by severity: Samsung, Xiaomi, Huawei, OnePlus, OPPO, Vivo, Realme, etc.
+      final aggressiveOems = {
+        'samsung': 'https://dontkillmyapp.com/samsung',
+        'xiaomi': 'https://dontkillmyapp.com/xiaomi',
+        'huawei': 'https://dontkillmyapp.com/huawei',
+        'oneplus': 'https://dontkillmyapp.com/oneplus',
+        'oppo': 'https://dontkillmyapp.com/oppo',
+        'vivo': 'https://dontkillmyapp.com/vivo',
+        'realme': 'https://dontkillmyapp.com/realme',
+        'meizu': 'https://dontkillmyapp.com/meizu',
+        'asus': 'https://dontkillmyapp.com/asus',
+        'lenovo': 'https://dontkillmyapp.com/lenovo',
+        'nokia': 'https://dontkillmyapp.com/nokia',
+        'tecno': 'https://dontkillmyapp.com/tecno',
+        'infinix': 'https://dontkillmyapp.com/infinix',
+      };
+      
+      // Check if this is an aggressive OEM
+      String? guideUrl;
+      for (final entry in aggressiveOems.entries) {
+        if (brand.contains(entry.key)) {
+          guideUrl = entry.value;
+          _oemBrand = entry.key[0].toUpperCase() + entry.key.substring(1); // Capitalize
+          break;
+        }
+      }
+      
+      if (guideUrl == null) return; // Not an aggressive OEM
+      
+      _oemGuideUrl = guideUrl;
+      
+      // Check if battery optimization is disabled
+      final isBatteryOptDisabled = await NotificationService().isBatteryOptimizationDisabled();
+      
+      if (!isBatteryOptDisabled && mounted && !_warningDismissed) {
+        setState(() => _showOemWarning = true);
+      }
+    } catch (e) {
+      debugPrint('HomeScreen: Error checking OEM battery optimization: $e');
+    }
   }
 
   @override
@@ -51,6 +116,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     // Refresh items when app resumes to update day counts
     if (state == AppLifecycleState.resumed) {
       context.read<TrackedItemsProvider>().refresh();
+      // Re-check OEM battery optimization (user might have fixed it)
+      _checkOemBatteryOptimization();
     }
   }
 
@@ -175,6 +242,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               ),
             ),
 
+            // --- OEM Battery Warning Banner ---
+            if (_showOemWarning)
+              _buildOemWarningBanner(isDarkMode),
+
             // --- List of Cards ---
             Expanded(
               child: Consumer<TrackedItemsProvider>(
@@ -229,6 +300,128 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  /// Build OEM battery optimization warning banner
+  /// Supports Samsung, Xiaomi, Huawei, OnePlus, OPPO, Vivo, Realme, etc.
+  Widget _buildOemWarningBanner(bool isDarkMode) {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF3E0), // Orange background
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFFF9800), width: 1),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(
+            Icons.warning_amber_rounded,
+            color: Color(0xFFE65100),
+            size: 24,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '$_oemBrand Battery Optimization',
+                  style: GoogleFonts.poppins(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: const Color(0xFFE65100),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Notifications may not work. Disable battery optimization and add this app to "Never sleeping apps".',
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    color: const Color(0xFF795548),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 8,
+                  children: [
+                    GestureDetector(
+                      onTap: () async {
+                        await NotificationService().requestDisableBatteryOptimization();
+                        // Re-check after user returns
+                        if (mounted) {
+                          final isDisabled = await NotificationService().isBatteryOptimizationDisabled();
+                          if (isDisabled) {
+                            setState(() => _showOemWarning = false);
+                          }
+                        }
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFF9800),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          'Fix Now',
+                          style: GoogleFonts.poppins(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                    GestureDetector(
+                      onTap: () async {
+                        final uri = Uri.parse(_oemGuideUrl);
+                        if (await canLaunchUrl(uri)) {
+                          await launchUrl(uri, mode: LaunchMode.externalApplication);
+                        }
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: Colors.transparent,
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(color: const Color(0xFFFF9800), width: 1),
+                        ),
+                        child: Text(
+                          'Learn More',
+                          style: GoogleFonts.poppins(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFFE65100),
+                          ),
+                        ),
+                      ),
+                    ),
+                    GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          _showOemWarning = false;
+                          _warningDismissed = true;
+                        });
+                      },
+                      child: Text(
+                        'Dismiss',
+                        style: GoogleFonts.poppins(
+                          fontSize: 12,
+                          color: const Color(0xFF795548),
+                          decoration: TextDecoration.underline,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
