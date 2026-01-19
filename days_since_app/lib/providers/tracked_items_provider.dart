@@ -58,8 +58,9 @@ class TrackedItemsProvider extends ChangeNotifier {
         ItemStatus.warning: 1,
         ItemStatus.good: 2,
       };
-      final statusCompare =
-          statusOrder[a.status]!.compareTo(statusOrder[b.status]!);
+      final statusCompare = statusOrder[a.status]!.compareTo(
+        statusOrder[b.status]!,
+      );
       if (statusCompare != 0) return statusCompare;
       // If same status, sort by percentage elapsed (descending)
       return b.percentageElapsed.compareTo(a.percentageElapsed);
@@ -167,15 +168,35 @@ class TrackedItemsProvider extends ChangeNotifier {
       _items.add(item);
 
       // Schedule notification for the new item
-      if (item.notificationsEnabled) {
-        final scheduled = await _notificationService.scheduleItemNotification(
-          item,
-          notificationHour: _notificationHour,
-          notificationMinute: _notificationMinute,
-        );
-        if (!scheduled) {
-          debugPrint('TrackedItemsProvider: Failed to schedule notification for new item "${item.name}"');
+      // IMPORTANT: Check both item setting AND service initialization before scheduling
+      if (item.notificationsEnabled && _notificationService.isInitialized) {
+        // Pre-check permission to provide better debug info
+        final hasPermission = await _notificationService
+            .areNotificationsEnabled();
+        if (!hasPermission) {
+          debugPrint(
+            'TrackedItemsProvider: Notification permission not granted, skipping schedule for "${item.name}"',
+          );
+        } else {
+          final scheduled = await _notificationService.scheduleItemNotification(
+            item,
+            notificationHour: _notificationHour,
+            notificationMinute: _notificationMinute,
+          );
+          if (!scheduled) {
+            debugPrint(
+              'TrackedItemsProvider: Failed to schedule notification for new item "${item.name}"',
+            );
+          } else {
+            debugPrint(
+              'TrackedItemsProvider: ✅ Scheduled notification for new item "${item.name}"',
+            );
+          }
         }
+      } else if (!_notificationService.isInitialized) {
+        debugPrint(
+          'TrackedItemsProvider: NotificationService not initialized, skipping schedule',
+        );
       }
 
       notifyListeners();
@@ -196,13 +217,35 @@ class TrackedItemsProvider extends ChangeNotifier {
         _items[index] = updatedItem;
 
         // Update notification schedule for this item
-        final scheduled = await _notificationService.scheduleItemNotification(
-          updatedItem,
-          notificationHour: _notificationHour,
-          notificationMinute: _notificationMinute,
-        );
-        if (!scheduled) {
-          debugPrint('TrackedItemsProvider: Failed to schedule notification for updated item "${updatedItem.name}"');
+        // IMPORTANT: Check service initialization before scheduling
+        if (_notificationService.isInitialized) {
+          final hasPermission = await _notificationService
+              .areNotificationsEnabled();
+          if (!hasPermission) {
+            debugPrint(
+              'TrackedItemsProvider: Notification permission not granted, skipping schedule for "${updatedItem.name}"',
+            );
+          } else {
+            final scheduled = await _notificationService
+                .scheduleItemNotification(
+                  updatedItem,
+                  notificationHour: _notificationHour,
+                  notificationMinute: _notificationMinute,
+                );
+            if (!scheduled) {
+              debugPrint(
+                'TrackedItemsProvider: Failed to schedule notification for updated item "${updatedItem.name}"',
+              );
+            } else {
+              debugPrint(
+                'TrackedItemsProvider: ✅ Scheduled notification for updated item "${updatedItem.name}"',
+              );
+            }
+          }
+        } else {
+          debugPrint(
+            'TrackedItemsProvider: NotificationService not initialized, skipping schedule',
+          );
         }
 
         notifyListeners();
@@ -243,13 +286,35 @@ class TrackedItemsProvider extends ChangeNotifier {
         _items[index] = updatedItem;
 
         // Reschedule notification for the reset item
-        final scheduled = await _notificationService.scheduleItemNotification(
-          updatedItem,
-          notificationHour: _notificationHour,
-          notificationMinute: _notificationMinute,
-        );
-        if (!scheduled) {
-          debugPrint('TrackedItemsProvider: Failed to schedule notification for reset item "${updatedItem.name}"');
+        // IMPORTANT: Check service initialization and permissions before scheduling
+        if (_notificationService.isInitialized) {
+          final hasPermission = await _notificationService
+              .areNotificationsEnabled();
+          if (!hasPermission) {
+            debugPrint(
+              'TrackedItemsProvider: Notification permission not granted, skipping schedule for reset "${updatedItem.name}"',
+            );
+          } else {
+            final scheduled = await _notificationService
+                .scheduleItemNotification(
+                  updatedItem,
+                  notificationHour: _notificationHour,
+                  notificationMinute: _notificationMinute,
+                );
+            if (!scheduled) {
+              debugPrint(
+                'TrackedItemsProvider: Failed to schedule notification for reset item "${updatedItem.name}"',
+              );
+            } else {
+              debugPrint(
+                'TrackedItemsProvider: ✅ Scheduled notification for reset item "${updatedItem.name}"',
+              );
+            }
+          }
+        } else {
+          debugPrint(
+            'TrackedItemsProvider: NotificationService not initialized, skipping schedule',
+          );
         }
 
         notifyListeners();

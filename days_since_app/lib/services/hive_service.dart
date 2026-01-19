@@ -10,7 +10,8 @@ class HiveServiceException implements Exception {
   HiveServiceException(this.message, [this.originalError]);
 
   @override
-  String toString() => 'HiveServiceException: $message${originalError != null ? ' ($originalError)' : ''}';
+  String toString() =>
+      'HiveServiceException: $message${originalError != null ? ' ($originalError)' : ''}';
 }
 
 /// Service class that handles all Hive database operations.
@@ -19,19 +20,34 @@ class HiveService {
   static const String _trackedItemsBoxName = 'tracked_items';
 
   static Box<TrackedItem>? _trackedItemsBox;
-  
+  static bool _isHiveInitialized = false;
+
   /// Track initialization errors for diagnostics
   static String? _initializationError;
-  
+
   /// Get initialization error if any
   static String? get initializationError => _initializationError;
 
   /// Initialize Hive and register all type adapters.
   /// Must be called before any other Hive operations.
+  /// Safe to call multiple times - will skip if already initialized.
   static Future<void> initialize() async {
+    // Guard against double initialization
+    if (_isHiveInitialized &&
+        _trackedItemsBox != null &&
+        _trackedItemsBox!.isOpen) {
+      debugPrint('HiveService: Already initialized, skipping');
+      return;
+    }
+
     try {
       _initializationError = null;
-      await Hive.initFlutter();
+
+      // Only call initFlutter once
+      if (!_isHiveInitialized) {
+        await Hive.initFlutter();
+        _isHiveInitialized = true;
+      }
 
       // Register type adapters
       if (!Hive.isAdapterRegistered(0)) {
@@ -40,7 +56,9 @@ class HiveService {
 
       // Open boxes
       _trackedItemsBox = await Hive.openBox<TrackedItem>(_trackedItemsBoxName);
-      debugPrint('HiveService: Initialized successfully with ${_trackedItemsBox?.length ?? 0} items');
+      debugPrint(
+        'HiveService: Initialized successfully with ${_trackedItemsBox?.length ?? 0} items',
+      );
     } catch (e, stackTrace) {
       _initializationError = e.toString();
       debugPrint('HiveService: Initialization failed - $e');

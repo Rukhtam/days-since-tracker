@@ -55,9 +55,7 @@ class DaysSinceApp extends StatelessWidget {
     return MultiProvider(
       providers: [
         // Settings provider - initialize first as others may depend on it
-        ChangeNotifierProvider(
-          create: (_) => SettingsProvider()..initialize(),
-        ),
+        ChangeNotifierProvider(create: (_) => SettingsProvider()..initialize()),
         // Tracked items provider
         ChangeNotifierProxyProvider<SettingsProvider, TrackedItemsProvider>(
           create: (_) => TrackedItemsProvider()..loadItems(),
@@ -75,18 +73,21 @@ class DaysSinceApp extends StatelessWidget {
       child: Consumer<SettingsProvider>(
         builder: (context, settings, _) {
           // Determine theme - uses system theme as default before settings load
-          final isDark = settings.flutterThemeMode == ThemeMode.dark ||
+          final isDark =
+              settings.flutterThemeMode == ThemeMode.dark ||
               (settings.flutterThemeMode == ThemeMode.system &&
                   MediaQuery.platformBrightnessOf(context) == Brightness.dark);
 
           SystemChrome.setSystemUIOverlayStyle(
             SystemUiOverlayStyle(
               statusBarColor: Colors.transparent,
-              statusBarIconBrightness:
-                  isDark ? Brightness.light : Brightness.dark,
+              statusBarIconBrightness: isDark
+                  ? Brightness.light
+                  : Brightness.dark,
               systemNavigationBarColor: Colors.transparent,
-              systemNavigationBarIconBrightness:
-                  isDark ? Brightness.light : Brightness.dark,
+              systemNavigationBarIconBrightness: isDark
+                  ? Brightness.light
+                  : Brightness.dark,
               systemNavigationBarContrastEnforced: false,
             ),
           );
@@ -105,9 +106,13 @@ class DaysSinceApp extends StatelessWidget {
             home: AnnotatedRegion<SystemUiOverlayStyle>(
               value: SystemUiOverlayStyle(
                 statusBarColor: Colors.transparent,
-                statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
+                statusBarIconBrightness: isDark
+                    ? Brightness.light
+                    : Brightness.dark,
                 systemNavigationBarColor: Colors.transparent,
-                systemNavigationBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
+                systemNavigationBarIconBrightness: isDark
+                    ? Brightness.light
+                    : Brightness.dark,
                 systemNavigationBarContrastEnforced: false,
                 systemNavigationBarDividerColor: Colors.transparent,
               ),
@@ -163,38 +168,75 @@ class _AppInitializerState extends State<AppInitializer> {
     }
 
     if (!settings.isInitialized) {
-      debugPrint('AppInitializer: SettingsProvider failed to initialize after ${maxWaitAttempts * 100}ms');
+      debugPrint(
+        'AppInitializer: SettingsProvider failed to initialize after ${maxWaitAttempts * 100}ms',
+      );
       return;
     }
 
-    debugPrint('AppInitializer: SettingsProvider initialized, isFirstLaunch=${settings.isFirstLaunch}');
+    debugPrint(
+      'AppInitializer: SettingsProvider initialized, isFirstLaunch=${settings.isFirstLaunch}',
+    );
+
+    // CRITICAL FIX: Wait for TrackedItemsProvider to finish loading
+    // This prevents the race condition where items list is empty during scheduling
+    int itemsWaitAttempts = 0;
+    const maxItemsWaitAttempts = 30; // Max 3 seconds
+    while (itemsProvider.isLoading &&
+        itemsWaitAttempts < maxItemsWaitAttempts) {
+      await Future.delayed(const Duration(milliseconds: 100));
+      itemsWaitAttempts++;
+      if (!mounted) return;
+    }
+    debugPrint(
+      'AppInitializer: ItemsProvider ready, ${itemsProvider.items.length} items loaded',
+    );
 
     // Get the NotificationService instance
     final notificationService = NotificationService();
 
     // Verify NotificationService is initialized before proceeding
     if (!notificationService.isInitialized) {
-      debugPrint('AppInitializer: NotificationService not initialized, waiting...');
+      debugPrint(
+        'AppInitializer: NotificationService not initialized, waiting...',
+      );
       // Wait a bit more for notification service to initialize
       int nsWaitAttempts = 0;
       const maxNsWaitAttempts = 30; // Max 3 seconds
-      while (!notificationService.isInitialized && nsWaitAttempts < maxNsWaitAttempts) {
+      while (!notificationService.isInitialized &&
+          nsWaitAttempts < maxNsWaitAttempts) {
         await Future.delayed(const Duration(milliseconds: 100));
         nsWaitAttempts++;
         if (!mounted) return;
       }
 
       if (!notificationService.isInitialized) {
-        debugPrint('AppInitializer: NotificationService failed to initialize, skipping permission request');
-        return;
+        debugPrint(
+          'AppInitializer: NotificationService not initialized after wait, attempting re-init...',
+        );
+        // Try to reinitialize - this handles cases where initial init failed
+        final reinitSuccess = await notificationService.initialize(
+          forceReinit: true,
+        );
+        if (!reinitSuccess) {
+          debugPrint(
+            'AppInitializer: NotificationService re-init failed, skipping permission request',
+          );
+          return;
+        }
+        debugPrint('AppInitializer: NotificationService re-init successful');
       }
     }
 
-    debugPrint('AppInitializer: NotificationService.isInitialized = ${notificationService.isInitialized}');
+    debugPrint(
+      'AppInitializer: NotificationService.isInitialized = ${notificationService.isInitialized}',
+    );
 
     // Request notification permissions on first launch
     if (settings.isFirstLaunch) {
-      debugPrint('AppInitializer: First launch detected, requesting notification permissions');
+      debugPrint(
+        'AppInitializer: First launch detected, requesting notification permissions',
+      );
 
       // IMPORTANT: Use forceShowDialog=true on first launch
       // This ensures we try to show the system permission dialog on Android 13+
@@ -211,7 +253,9 @@ class _AppInitializerState extends State<AppInitializer> {
         settings.markFirstLaunchComplete();
         debugPrint('AppInitializer: Marked first launch complete');
       } else {
-        debugPrint('AppInitializer: NOT marking first launch complete due to permission request failure');
+        debugPrint(
+          'AppInitializer: NOT marking first launch complete due to permission request failure',
+        );
       }
     }
 
@@ -222,22 +266,43 @@ class _AppInitializerState extends State<AppInitializer> {
     if (settings.notificationsEnabled) {
       try {
         // Verify permission was actually granted before scheduling
-        final hasPermission = await notificationService.areNotificationsEnabled();
+        final hasPermission = await notificationService
+            .areNotificationsEnabled();
+        debugPrint(
+          'AppInitializer: Notification permission check = $hasPermission',
+        );
+
         if (hasPermission) {
           final items = itemsProvider.items;
-          await notificationService.updateAllNotifications(
-            items,
-            notificationHour: settings.notificationTimeHour,
-            notificationMinute: settings.notificationTimeMinute,
+          debugPrint(
+            'AppInitializer: Scheduling notifications for ${items.length} items',
           );
-          debugPrint('AppInitializer: Notifications scheduled successfully');
+
+          if (items.isEmpty) {
+            debugPrint(
+              'AppInitializer: No items to schedule notifications for',
+            );
+          } else {
+            await notificationService.updateAllNotifications(
+              items,
+              notificationHour: settings.notificationTimeHour,
+              notificationMinute: settings.notificationTimeMinute,
+            );
+            debugPrint('AppInitializer: Notifications scheduled successfully');
+          }
         } else {
-          debugPrint('AppInitializer: Skipping notification scheduling - permission not granted');
+          debugPrint(
+            'AppInitializer: Skipping notification scheduling - permission not granted',
+          );
         }
       } catch (e) {
         // Don't let scheduling failures crash the app or block initialization
         debugPrint('AppInitializer: Error scheduling notifications - $e');
       }
+    } else {
+      debugPrint(
+        'AppInitializer: Global notifications disabled, skipping scheduling',
+      );
     }
   }
 

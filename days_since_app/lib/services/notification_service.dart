@@ -43,12 +43,29 @@ class NotificationService {
   /// Check if notifications are initialized
   bool get isInitialized => _isInitialized;
 
+  /// Reset initialization state to allow retry after failure
+  /// CAUTION: Only use this if initialization failed and you want to retry
+  void resetInitialization() {
+    _isInitialized = false;
+    debugPrint(
+      'NotificationService: Initialization state reset, ready for retry',
+    );
+  }
+
   /// Initialize the notification service.
   /// Must be called before any other notification operations.
+  /// Set [forceReinit] to true to retry after a previous failure.
   Future<bool> initialize({
     void Function(NotificationResponse)? onNotificationTap,
+    bool forceReinit = false,
   }) async {
-    if (_isInitialized) return true;
+    if (_isInitialized && !forceReinit) return true;
+
+    // Allow retry if forceReinit is true
+    if (forceReinit) {
+      debugPrint('NotificationService: Force re-initialization requested');
+      _isInitialized = false;
+    }
 
     try {
       // Initialize timezone database
