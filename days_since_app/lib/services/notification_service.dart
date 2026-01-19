@@ -64,7 +64,9 @@ class NotificationService {
         tz.setLocalLocation(tz.getLocation(timeZoneName));
         debugPrint('NotificationService: Timezone set to $timeZoneName');
       } catch (tzError) {
-        debugPrint('NotificationService: Timezone detection failed, falling back to UTC: $tzError');
+        debugPrint(
+          'NotificationService: Timezone detection failed, falling back to UTC: $tzError',
+        );
         tz.setLocalLocation(tz.UTC);
       }
 
@@ -97,7 +99,7 @@ class NotificationService {
 
       if (_isInitialized) {
         debugPrint('NotificationService: Initialized successfully');
-        
+
         // Create notification channel for Android 8+ with high importance
         if (Platform.isAndroid) {
           await _createNotificationChannel();
@@ -121,7 +123,7 @@ class NotificationService {
           .resolvePlatformSpecificImplementation<
             AndroidFlutterLocalNotificationsPlugin
           >();
-      
+
       if (androidPlugin != null) {
         const channel = AndroidNotificationChannel(
           _channelId,
@@ -132,18 +134,20 @@ class NotificationService {
           enableVibration: true,
           showBadge: true,
         );
-        
+
         await androidPlugin.createNotificationChannel(channel);
         debugPrint('NotificationService: Notification channel created');
       }
     } catch (e) {
-      debugPrint('NotificationService: Failed to create notification channel - $e');
+      debugPrint(
+        'NotificationService: Failed to create notification channel - $e',
+      );
     }
   }
 
   /// Request notification permissions from the user.
   /// Returns true if permissions were granted.
-  /// 
+  ///
   /// NOTE: This method should work even if initialization failed, as requesting
   /// permission is independent of the notification scheduling system.
   Future<bool> requestPermissions() async {
@@ -197,7 +201,7 @@ class NotificationService {
   /// Check if notifications are permitted using multiple methods for reliability.
   /// Uses both permission_handler and flutter_local_notifications as fallback.
   /// This handles edge cases on Android 14+/16 with One UI 8.
-  /// 
+  ///
   /// NOTE: This method does NOT depend on _isInitialized because checking
   /// permissions is independent of the notification scheduling system.
   /// Users should see accurate permission status even if initialization failed.
@@ -211,8 +215,10 @@ class NotificationService {
     try {
       // Method 1: Use permission_handler (preferred)
       final permissionStatus = await Permission.notification.status;
-      debugPrint('NotificationService: permission_handler status = $permissionStatus');
-      
+      debugPrint(
+        'NotificationService: permission_handler status = $permissionStatus',
+      );
+
       // Method 2: Use flutter_local_notifications as fallback/verification
       bool? flnEnabled;
       if (Platform.isAndroid) {
@@ -226,17 +232,21 @@ class NotificationService {
             flnEnabled = await androidPlugin.areNotificationsEnabled();
           }
         } catch (pluginError) {
-          debugPrint('NotificationService: Android plugin check failed - $pluginError');
+          debugPrint(
+            'NotificationService: Android plugin check failed - $pluginError',
+          );
           // Continue with permission_handler result only
         }
       }
-      debugPrint('NotificationService: flutter_local_notifications enabled = $flnEnabled');
-      
+      debugPrint(
+        'NotificationService: flutter_local_notifications enabled = $flnEnabled',
+      );
+
       // If either method says granted, consider it granted
       // This handles edge cases where one method fails on specific devices
       final isGranted = permissionStatus.isGranted || (flnEnabled == true);
       debugPrint('NotificationService: Final permission result = $isGranted');
-      
+
       return isGranted;
     } catch (e) {
       debugPrint('NotificationService: Failed to check permissions - $e');
@@ -261,7 +271,9 @@ class NotificationService {
   Future<bool> isPermissionPermanentlyDenied() async {
     try {
       final status = await Permission.notification.status;
-      debugPrint('NotificationService: Checking permanently denied = ${status.isPermanentlyDenied}');
+      debugPrint(
+        'NotificationService: Checking permanently denied = ${status.isPermanentlyDenied}',
+      );
       return status.isPermanentlyDenied;
     } catch (e) {
       debugPrint('NotificationService: Error checking permanently denied - $e');
@@ -284,7 +296,9 @@ class NotificationService {
     // Only scheduling operations need _isInitialized to be true.
     // See: suggestions.md - "Decouple Permissions from _isInitialized (Fix B)"
     if (!_isInitialized) {
-      debugPrint('NotificationService: Warning - Requesting permissions before full init (this is OK)');
+      debugPrint(
+        'NotificationService: Warning - Requesting permissions before full init (this is OK)',
+      );
       // Continue anyway - permission dialog can still be shown
     }
 
@@ -299,14 +313,18 @@ class NotificationService {
 
         // First, check current permission status
         final currentStatus = await Permission.notification.status;
-        debugPrint('NotificationService: Current permission status = $currentStatus');
+        debugPrint(
+          'NotificationService: Current permission status = $currentStatus',
+        );
 
         // On Android 12 and below, POST_NOTIFICATIONS permission doesn't exist
         // The permission_handler may return "granted" by default
         // We still try to request to ensure the system dialog appears on Android 13+
 
         if (currentStatus.isPermanentlyDenied) {
-          debugPrint('NotificationService: Permission permanently denied, user must enable in settings');
+          debugPrint(
+            'NotificationService: Permission permanently denied, user must enable in settings',
+          );
           return PermissionRequestResult.permanentlyDenied;
         }
 
@@ -319,7 +337,9 @@ class NotificationService {
         }
 
         // Request permission - this should show the system dialog on Android 13+
-        debugPrint('NotificationService: Requesting notification permission...');
+        debugPrint(
+          'NotificationService: Requesting notification permission...',
+        );
 
         // Use flutter_local_notifications plugin method for Android
         // This is more reliable than permission_handler on some devices
@@ -333,7 +353,9 @@ class NotificationService {
 
           // Double-check with permission_handler
           final postRequestStatus = await Permission.notification.status;
-          debugPrint('NotificationService: Post-request status = $postRequestStatus');
+          debugPrint(
+            'NotificationService: Post-request status = $postRequestStatus',
+          );
 
           if (postRequestStatus.isGranted) {
             return PermissionRequestResult.granted;
@@ -348,9 +370,11 @@ class NotificationService {
         // Using both permission_handler and flutter_local_notifications simultaneously
         // can cause the Android system to ignore/cancel permission dialogs
         // See: suggestions.md - "Dual Permission Conflict"
-        debugPrint('NotificationService: Android plugin not available, assuming older device');
-        return PermissionRequestResult.granted; // Older Android versions don't need permission
-
+        debugPrint(
+          'NotificationService: Android plugin not available, assuming older device',
+        );
+        return PermissionRequestResult
+            .granted; // Older Android versions don't need permission
       } else if (Platform.isIOS) {
         // iOS permission request
         final currentStatus = await Permission.notification.status;
@@ -392,21 +416,25 @@ class NotificationService {
   /// Required for scheduled notifications to work reliably
   Future<bool> canScheduleExactAlarms() async {
     if (!Platform.isAndroid) return true;
-    
+
     try {
       final androidPlugin = _notifications
           .resolvePlatformSpecificImplementation<
             AndroidFlutterLocalNotificationsPlugin
           >();
-      
+
       if (androidPlugin != null) {
         final canSchedule = await androidPlugin.canScheduleExactNotifications();
-        debugPrint('NotificationService: Can schedule exact alarms = $canSchedule');
+        debugPrint(
+          'NotificationService: Can schedule exact alarms = $canSchedule',
+        );
         return canSchedule ?? true;
       }
       return true;
     } catch (e) {
-      debugPrint('NotificationService: Error checking exact alarm permission - $e');
+      debugPrint(
+        'NotificationService: Error checking exact alarm permission - $e',
+      );
       return true; // Assume allowed on older devices
     }
   }
@@ -415,13 +443,13 @@ class NotificationService {
   /// Opens system settings if needed
   Future<bool> requestExactAlarmPermission() async {
     if (!Platform.isAndroid) return true;
-    
+
     try {
       final androidPlugin = _notifications
           .resolvePlatformSpecificImplementation<
             AndroidFlutterLocalNotificationsPlugin
           >();
-      
+
       if (androidPlugin != null) {
         await androidPlugin.requestExactAlarmsPermission();
         // Check if granted after request
@@ -429,7 +457,9 @@ class NotificationService {
       }
       return true;
     } catch (e) {
-      debugPrint('NotificationService: Error requesting exact alarm permission - $e');
+      debugPrint(
+        'NotificationService: Error requesting exact alarm permission - $e',
+      );
       return false;
     }
   }
@@ -438,13 +468,15 @@ class NotificationService {
   /// Important for scheduled notifications on OPPO, Xiaomi, Samsung, etc.
   Future<bool> isBatteryOptimizationDisabled() async {
     if (!Platform.isAndroid) return true;
-    
+
     try {
       final status = await Permission.ignoreBatteryOptimizations.status;
       debugPrint('NotificationService: Battery optimization status = $status');
       return status.isGranted;
     } catch (e) {
-      debugPrint('NotificationService: Error checking battery optimization - $e');
+      debugPrint(
+        'NotificationService: Error checking battery optimization - $e',
+      );
       return false;
     }
   }
@@ -453,13 +485,17 @@ class NotificationService {
   /// This helps ensure notifications work on aggressive OEM skins
   Future<bool> requestDisableBatteryOptimization() async {
     if (!Platform.isAndroid) return true;
-    
+
     try {
       final status = await Permission.ignoreBatteryOptimizations.request();
-      debugPrint('NotificationService: Battery optimization request result = $status');
+      debugPrint(
+        'NotificationService: Battery optimization request result = $status',
+      );
       return status.isGranted;
     } catch (e) {
-      debugPrint('NotificationService: Error requesting battery optimization disable - $e');
+      debugPrint(
+        'NotificationService: Error requesting battery optimization disable - $e',
+      );
       return false;
     }
   }
@@ -468,40 +504,41 @@ class NotificationService {
   /// Useful for troubleshooting notification issues on different devices
   Future<Map<String, dynamic>> getNotificationDiagnostics() async {
     final diagnostics = <String, dynamic>{};
-    
+
     try {
       diagnostics['isInitialized'] = _isInitialized;
       diagnostics['notificationPermission'] = await areNotificationsEnabled();
-      
+
       if (Platform.isAndroid) {
         diagnostics['exactAlarmPermission'] = await canScheduleExactAlarms();
-        diagnostics['batteryOptimizationDisabled'] = await isBatteryOptimizationDisabled();
-        
+        diagnostics['batteryOptimizationDisabled'] =
+            await isBatteryOptimizationDisabled();
+
         // Get pending notifications count
         final pending = await getPendingNotifications();
         diagnostics['pendingNotificationsCount'] = pending.length;
-        
+
         // Check permission_handler status
         final permStatus = await Permission.notification.status;
         diagnostics['permissionHandlerStatus'] = permStatus.toString();
-        
+
         // Check flutter_local_notifications status
         final androidPlugin = _notifications
             .resolvePlatformSpecificImplementation<
               AndroidFlutterLocalNotificationsPlugin
             >();
         if (androidPlugin != null) {
-          diagnostics['flnNotificationsEnabled'] = 
-              await androidPlugin.areNotificationsEnabled();
+          diagnostics['flnNotificationsEnabled'] = await androidPlugin
+              .areNotificationsEnabled();
         }
       }
-      
+
       debugPrint('NotificationService: Diagnostics = $diagnostics');
     } catch (e) {
       diagnostics['error'] = e.toString();
       debugPrint('NotificationService: Diagnostics error - $e');
     }
-    
+
     return diagnostics;
   }
 
@@ -534,17 +571,19 @@ class NotificationService {
         notificationHour: notificationHour,
         notificationMinute: notificationMinute,
       );
-      
+
       // Schedule the smart reminder (1 day before due)
       await _scheduleSmartReminder(
         item,
         notificationHour: notificationHour,
         notificationMinute: notificationMinute,
       );
-      
+
       return mainResult;
     } catch (e, stackTrace) {
-      debugPrint('NotificationService: Failed to schedule notifications for "${item.name}" - $e');
+      debugPrint(
+        'NotificationService: Failed to schedule notifications for "${item.name}" - $e',
+      );
       debugPrint('NotificationService: Stack trace - $stackTrace');
       return false;
     }
@@ -556,6 +595,12 @@ class NotificationService {
     required int notificationHour,
     required int notificationMinute,
   }) async {
+    debugPrint(
+      'NotificationService: _scheduleMainNotification for "${item.name}" '
+      '(interval: ${item.recommendedIntervalDays}, daysSince: ${item.daysSinceReset}, '
+      'percentElapsed: ${item.percentageElapsed.toStringAsFixed(1)}%)',
+    );
+
     try {
       // Calculate when to send the notification (at 90% of interval)
       final notificationDate = _calculateNotificationDate(
@@ -564,11 +609,19 @@ class NotificationService {
         notificationMinute: notificationMinute,
       );
 
+      debugPrint(
+        'NotificationService: Calculated notificationDate = $notificationDate',
+      );
+
       if (notificationDate == null) {
         // If already at 90% or more, show notification immediately
         // This handles both warning (90-100%) and overdue (>100%) states
+        debugPrint(
+          'NotificationService: notificationDate is null, checking percentageElapsed >= 90: ${item.percentageElapsed >= 90}',
+        );
         if (item.percentageElapsed >= 90) {
           // Show notification now if in the warning or overdue zone
+          debugPrint('NotificationService: Triggering immediate notification!');
           return await _showImmediateNotification(item);
         }
         return true;
@@ -577,10 +630,10 @@ class NotificationService {
       // Check if we can schedule exact alarms (Android 12+ requires permission)
       // If not, fall back to inexact scheduling which is more reliable
       final canUseExact = await canScheduleExactAlarms();
-      final scheduleMode = canUseExact 
-          ? AndroidScheduleMode.exactAllowWhileIdle 
+      final scheduleMode = canUseExact
+          ? AndroidScheduleMode.exactAllowWhileIdle
           : AndroidScheduleMode.inexactAllowWhileIdle;
-      
+
       if (!canUseExact) {
         debugPrint(
           'NotificationService: Exact alarms not permitted, using inexact mode for "${item.name}"',
@@ -653,9 +706,13 @@ class NotificationService {
     try {
       await _notifications.cancel(_getNotificationId(itemId));
       await _cancelSmartReminder(itemId);
-      debugPrint('NotificationService: Cancelled all notifications for item $itemId');
+      debugPrint(
+        'NotificationService: Cancelled all notifications for item $itemId',
+      );
     } catch (e) {
-      debugPrint('NotificationService: Failed to cancel notification for $itemId - $e');
+      debugPrint(
+        'NotificationService: Failed to cancel notification for $itemId - $e',
+      );
     }
   }
 
@@ -670,7 +727,9 @@ class NotificationService {
       await _notifications.cancelAll();
       debugPrint('NotificationService: Cancelled all notifications');
     } catch (e) {
-      debugPrint('NotificationService: Failed to cancel all notifications - $e');
+      debugPrint(
+        'NotificationService: Failed to cancel all notifications - $e',
+      );
     }
   }
 
@@ -698,15 +757,35 @@ class NotificationService {
   }
 
   /// Show an immediate notification for an item that's already due.
+  /// Uses a different notification ID suffix to avoid silent replacement.
   Future<bool> _showImmediateNotification(TrackedItem item) async {
+    debugPrint(
+      'NotificationService: _showImmediateNotification called for "${item.name}" '
+      '(daysSince: ${item.daysSinceReset}, percentElapsed: ${item.percentageElapsed.toStringAsFixed(1)}%)',
+    );
+
     try {
+      // Use different notification ID for immediate notifications
+      // This prevents silent replacement when the same item has a scheduled notification
+      final immediateNotificationId = _getNotificationId(item.id) + 1;
+
+      // Cancel any previously scheduled notification for this item
+      // to avoid duplicate notifications
+      await _notifications.cancel(_getNotificationId(item.id));
+
       final androidDetails = AndroidNotificationDetails(
         _channelId,
         _channelName,
         channelDescription: _channelDescription,
-        importance: Importance.high,
-        priority: Priority.high,
+        importance: Importance.max, // Maximum importance for immediate alerts
+        priority: Priority.max, // Maximum priority
         icon: _androidIcon,
+        // CRITICAL: Ensure notification always alerts, even if replacing existing
+        onlyAlertOnce: false,
+        // Show as heads-up notification
+        fullScreenIntent: true,
+        // Add ticker for accessibility
+        ticker: '${item.name} needs attention',
         actions: [
           const AndroidNotificationAction(
             'reset_action',
@@ -720,6 +799,9 @@ class NotificationService {
         presentAlert: true,
         presentBadge: true,
         presentSound: true,
+        // Ensure notification appears even when app is in foreground
+        presentBanner: true,
+        presentList: true,
       );
 
       final details = NotificationDetails(
@@ -728,7 +810,7 @@ class NotificationService {
       );
 
       await _notifications.show(
-        _getNotificationId(item.id),
+        immediateNotificationId,
         _getNotificationTitle(item),
         _getNotificationBody(item),
         details,
@@ -736,12 +818,12 @@ class NotificationService {
       );
 
       debugPrint(
-        'NotificationService: Showed immediate notification for ${item.name}',
+        'NotificationService: ✅ Showed immediate notification for "${item.name}" (ID: $immediateNotificationId)',
       );
       return true;
     } catch (e) {
       debugPrint(
-        'NotificationService: Failed to show immediate notification - $e',
+        'NotificationService: ❌ Failed to show immediate notification - $e',
       );
       return false;
     }
@@ -847,7 +929,7 @@ class NotificationService {
 
       // Calculate 1 day before the interval expires
       final daysUntilDue = item.daysUntilDue;
-      
+
       // If already due or less than 1 day away, don't schedule
       if (daysUntilDue <= 1) {
         return true;
@@ -871,8 +953,8 @@ class NotificationService {
 
       // Check if we can schedule exact alarms (Android 12+ requires permission)
       final canUseExact = await canScheduleExactAlarms();
-      final scheduleMode = canUseExact 
-          ? AndroidScheduleMode.exactAllowWhileIdle 
+      final scheduleMode = canUseExact
+          ? AndroidScheduleMode.exactAllowWhileIdle
           : AndroidScheduleMode.inexactAllowWhileIdle;
 
       final androidDetails = AndroidNotificationDetails(
@@ -920,7 +1002,9 @@ class NotificationService {
       );
       return true;
     } catch (e) {
-      debugPrint('NotificationService: Failed to schedule smart reminder for "${item.name}" - $e');
+      debugPrint(
+        'NotificationService: Failed to schedule smart reminder for "${item.name}" - $e',
+      );
       return false;
     }
   }
@@ -929,7 +1013,9 @@ class NotificationService {
   Future<void> _cancelSmartReminder(String itemId) async {
     try {
       await _notifications.cancel(_getSmartReminderId(itemId));
-      debugPrint('NotificationService: Cancelled smart reminder for item $itemId');
+      debugPrint(
+        'NotificationService: Cancelled smart reminder for item $itemId',
+      );
     } catch (e) {
       debugPrint('NotificationService: Failed to cancel smart reminder - $e');
     }
