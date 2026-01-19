@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    This file is used by R8/ProGuard to prevent resources from being stripped
+    during release builds. Without this, notification icons may be removed
+    causing notifications to fail silently.
+    
+    Reference: https://pub.dev/packages/flutter_local_notifications#release-build-configuration
+-->
+<resources xmlns:tools="http://schemas.android.com/tools"
+    tools:keep="@drawable/*,@mipmap/*" />
