@@ -690,18 +690,41 @@ class NotificationService {
       );
 
       // Schedule the notification with appropriate mode
-      await _notifications.zonedSchedule(
-        _getNotificationId(item.id),
-        _getNotificationTitle(item),
-        _getNotificationBody(item),
-        notificationDate,
-        details,
-        androidScheduleMode: scheduleMode,
-      );
-
-      debugPrint(
-        'NotificationService: Scheduled notification for "${item.name}" at $notificationDate (mode: ${canUseExact ? "exact" : "inexact"})',
-      );
+      try {
+        await _notifications.zonedSchedule(
+          _getNotificationId(item.id),
+          _getNotificationTitle(item),
+          _getNotificationBody(item),
+          notificationDate,
+          details,
+          androidScheduleMode: scheduleMode,
+        );
+        debugPrint(
+          'NotificationService: ✅ Successfully scheduled notification for "${item.name}" at $notificationDate (mode: ${canUseExact ? "exact" : "inexact"})',
+        );
+      } catch (scheduleError) {
+        debugPrint(
+          'NotificationService: ❌ zonedSchedule failed for "${item.name}" - $scheduleError',
+        );
+        // On Android 10 and some Samsung devices, exact scheduling might fail
+        // Try fallback to inexact mode if we were trying exact
+        if (canUseExact && scheduleError.toString().contains('exact')) {
+          debugPrint('NotificationService: Retrying with inexact mode...');
+          await _notifications.zonedSchedule(
+            _getNotificationId(item.id),
+            _getNotificationTitle(item),
+            _getNotificationBody(item),
+            notificationDate,
+            details,
+            androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+          );
+          debugPrint(
+            'NotificationService: ✅ Retry successful with inexact mode',
+          );
+        } else {
+          rethrow;
+        }
+      }
       return true;
     } catch (e, stackTrace) {
       debugPrint(
