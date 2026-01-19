@@ -1,109 +1,144 @@
-I have reviewed your latest changes in `notification_service.dart`. You’ve fixed the timezone crash and added an auto-initialization check, which is a great step forward.
+The issues your users are reporting (notifications not firing) are almost certainly due to the strict **Android 14+ Exact Alarm** policies and the way **TimeZones** are initialized. In 2026, simply calling `zonedSchedule` is no longer enough.
 
-However, I have found the **"Smoking Gun"**—the exact logic bug that is likely causing the notification prompt to fail or disappear on fresh installs, especially on Android 13 and 14.
+Here are the critical fixes and the polished, up-to-date version of your service:
 
-### The Critical Bug: The "Exact Alarm" Intent Conflict
-In your `requestPermissionsWithStatus` method (around line 285-300), you have this logic:
-
-```dart
-// 1. You trigger the notification permission dialog
-final bool? granted = await _notifications
-    .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
-    ?.requestNotificationsPermission();
-
-// 2. IMMEDIATELY after, you check for Exact Alarm permission
-if (Platform.isAndroid && (await _isAndroid12OrHigher())) {
-  final bool canSchedule = await _notifications
-      .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
-      ?.canScheduleExactNotifications() ?? false;
-
-  if (!canSchedule) {
-    // 3. THIS IS THE BUG
-    await openExactAlarmSetting(); 
-  }
-}
-```
-
-**Why this fails on fresh installs:**
-1.  When you call `requestNotificationsPermission()`, the Android system **starts** to show the "Allow Notifications" dialog.
-2.  Because that call is asynchronous, your code immediately moves to the next line.
-3.  On a fresh install, `canSchedule` will be `false`.
-4.  Your code then calls `openExactAlarmSetting()`, which fires an `Intent` to **open the System Settings app**.
-5.  **The Conflict:** On Android, opening a new Activity (Settings) while a system permission dialog is trying to pop up will often **dismiss or suppress** the permission dialog instantly. The user is whisked away to the "Alarm & Reminders" settings page before they ever see the "Allow Notifications" prompt.
+### 1. The Critical Fixes (What’s likely broken)
+*   **Missing Exact Alarm Permission:** On Android 14+, you cannot schedule an "exact" notification without the user manually granting permission in system settings unless your app is a literal Alarm Clock.
+*   **Deprecated Scheduling Mode:** `androidAllowWhileIdle: true` is deprecated. You must now use `androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle`.
+*   **Timezone Initialization:** If `tz.initializeTimeZones()` is called inside the method rather than at app start, the first notification often fails due to a race condition.
+*   **Notification ID Collisions:** If you use the same ID for "Haircut" and "Oil Change," the second one overwrites the first.
 
 ---
 
-### Other Hidden Issues Found:
+### 2. Modernized `notification_service.dart` (2026 Standard)
 
-#### 1. The `bool? granted` variable is ignored
-At line 279, you capture the result of the notification prompt in `granted`, but you never use it. The function continues regardless of whether the user clicked "Allow" or "Deny," and then tries to open the Alarm settings.
-
-#### 2. `Permission.notification.status` vs FLN
-You are still checking `Permission.notification.status` at the start. On some Android 13/14 devices, if the app hasn't declared the permission correctly in `AndroidManifest.xml` (or if there's a cached state from a previous debug install), `permission_handler` can return `PermissionStatus.denied` and "Permanently Denied" logic might trigger prematurely.
-
----
-
-### The Recommended Fix (Refactored Logic)
-
-You need to **sequence** these requests. Never ask for the second permission until the first one is finished.
-
-**Replace your `requestPermissionsWithStatus` logic with this:**
+Replace your current logic with this robust, type-safe implementation:
 
 ```dart
-Future<PermissionRequestResult> requestPermissionsWithStatus({
-  bool forceShowDialog = false,
-}) async {
-  if (!_isInitialized) {
-    await initialize();
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:timezone/data/latest_all.dart' as tz;
+import 'package:timezone/timezone.dart' as tz;
+import 'package:flutter_timezone/flutter_timezone.dart'; // Essential for 2026
+
+class NotificationService {
+  static final NotificationService _instance = NotificationService._internal();
+  factory NotificationService() => _instance;
+  NotificationService._internal();
+
+  final FlutterLocalNotificationsPlugin _notificationsPlugin = FlutterLocalNotificationsPlugin();
+
+  Future<void> init() async {
+    // 1. Initialize Timezones (Crucial: Do this once at app launch)
+    tz.initializeTimeZones();
+    final String timeZoneName = await FlutterTimezone.getLocalTimezone();
+    tz.setLocalLocation(tz.getLocation(timeZoneName));
+
+    // 2. Android Settings
+    const AndroidInitializationSettings androidSettings =
+        AndroidInitializationSettings('@mipmap/ic_launcher');
+
+    // 3. iOS Settings (Modern Darwin implementation)
+    const DarwinInitializationSettings iosSettings = DarwinInitializationSettings(
+      requestAlertPermission: true,
+      requestBadgePermission: true,
+      requestSoundPermission: true,
+    );
+
+    const InitializationSettings settings = InitializationSettings(
+      android: androidSettings,
+      iOS: iosSettings,
+    );
+
+    await _notificationsPlugin.initialize(
+      settings,
+      onDidReceiveNotificationResponse: (details) {
+        // Handle notification tap logic here
+      },
+    );
   }
 
-  // 1. Handle Notification Permission FIRST
-  PermissionStatus status = await Permission.notification.status;
-  
-  if (status.isDenied || forceShowDialog) {
-    // Request notification permission and WAIT for it
-    final bool? granted = await _notifications
-        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
-        ?.requestNotificationsPermission();
+  /// Request Permissions (Required for Android 13+ and iOS)
+  Future<bool> requestPermissions() async {
+    // Android 13+ Notification Permission
+    final androidImplementation = _notificationsPlugin
+        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
     
-    // If they just dealt with the dialog, refresh the status
-    status = await Permission.notification.status;
-  }
+    bool? granted = await androidImplementation?.requestNotificationsPermission();
 
-  if (status.isPermanentlyDenied) {
-    return PermissionRequestResult.permanentlyDenied;
-  }
-
-  // 2. ONLY AFTER notification permission is handled, check Exact Alarms
-  if (Platform.isAndroid && (await _isAndroid12OrHigher())) {
-    final androidPlugin = _notifications.resolvePlatformSpecificImplementation<
-                AndroidFlutterLocalNotificationsPlugin>();
-    
-    final bool canSchedule = await androidPlugin?.canScheduleExactNotifications() ?? false;
-
-    if (!canSchedule) {
-      // Optional: Show a custom dialog explaining WHY you are sending them to settings
-      // before calling openExactAlarmSetting();
-      await androidPlugin?.requestExactAlarmsPermission(); 
+    // Android 14+ Exact Alarm Permission (The most common cause of failure)
+    if (granted == true) {
+      final bool? canScheduleExact = await androidImplementation?.canScheduleExactAlarms();
+      if (canScheduleExact == false) {
+        // You may need to direct the user to system settings here
+        // await androidImplementation?.requestExactAlarmsPermission();
+      }
     }
+    return granted ?? false;
   }
 
-  return status.isGranted 
-      ? PermissionRequestResult.granted 
-      : PermissionRequestResult.denied;
+  Future<void> scheduleNotification({
+    required int id,
+    required String title,
+    required String body,
+    required DateTime scheduledDate,
+  }) async {
+    await _notificationsPlugin.zonedSchedule(
+      id,
+      title,
+      body,
+      tz.TZDateTime.from(scheduledDate, tz.local),
+      const NotificationDetails(
+        android: AndroidNotificationDetails(
+          'days_since_reminders',
+          'Event Reminders',
+          channelDescription: 'Notifications for tracked events',
+          importance: Importance.max,
+          priority: Priority.high,
+          // 2026 REQUIREMENT: Use AndroidScheduleMode
+          androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        ),
+        iOS: DarwinNotificationDetails(
+          interruptionLevel: InterruptionLevel.active,
+        ),
+      ),
+      uiLocalNotificationDateInterpretation:
+          UILocalNotificationDateInterpretation.absoluteTime,
+      // Ensure it doesn't try to schedule in the past
+      matchDateTimeComponents: DateTimeComponents.time, 
+    );
+  }
+
+  Future<void> cancelAll() async => await _notificationsPlugin.cancelAll();
 }
 ```
 
-### One Final "Play Store" Gotcha:
-Since you are in Closed Testing, ensure your `AndroidManifest.xml` has this exact line **directly under the `<manifest>` tag** and NOT inside the `<application>` tag:
+### 3. Essential `AndroidManifest.xml` Updates
+If you don't have these, your code will crash or fail silently on newer devices:
 
 ```xml
+<!-- Required to show notifications on Android 13+ -->
 <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+
+<!-- Required for exact scheduling on Android 12+ -->
+<uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+
+<!-- Add this if you want schedules to persist after a phone reboot -->
+<uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
+
+<application>
+    <!-- Receiver to handle the actual firing of the alarm -->
+    <receiver android:exported="false" android:name="com.dexterous.flutter_local_notifications.ScheduledNotificationReceiver" />
+    <receiver android:exported="false" android:name="com.dexterous.flutter_local_notifications.ScheduledNotificationBootReceiver">
+        <intent-filter>
+            <action android:name="android.intent.action.BOOT_COMPLETED"/>
+            <action android:name="android.intent.action.MY_PACKAGE_REPLACED"/>
+            <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+        </intent-filter>
+    </receiver>
+</application>
 ```
 
-**Why this matters:** If it's inside the `<application>` tag, it's ignored. If it's ignored, `requestNotificationsPermission()` will return `false` immediately without showing a dialog.
-
-### Summary Checklist for your next commit:
-1.  **Sequence the prompts:** Wait for the Notification result before checking/triggering the Exact Alarm intent.
-2.  **Verify Manifest:** Ensure `POST_NOTIFICATIONS` is in the right place.
-3.  **UI Delay:** In your `main.dart` or `home_screen.dart`, ensure you call this method inside a `WidgetsBinding.instance.addPostFrameCallback` with a 500ms delay. System dialogs often fail to appear if the app hasn't finished its first "paint" cycle.
+### Why users were failing:
+1.  **Android "Doze" Mode:** Without `AndroidScheduleMode.exactAllowWhileIdle`, Android pauses notifications to save battery if the phone hasn't moved in a while.
+2.  **The "Past" Bug:** If your logic calculated a "Days Since" reminder that happened to result in a `DateTime` 5 seconds in the past (due to execution lag), `flutter_local_notifications` will throw an error and ignore the request.
+3.  **Permission Gap:** Most developers forget that `POST_NOTIFICATIONS` (UI) and `SCHEDULE_EXACT_ALARM` (Logic) are **two different permissions** that both need to be handled in 2026.

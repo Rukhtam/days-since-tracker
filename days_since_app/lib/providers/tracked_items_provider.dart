@@ -168,11 +168,14 @@ class TrackedItemsProvider extends ChangeNotifier {
 
       // Schedule notification for the new item
       if (item.notificationsEnabled) {
-        _notificationService.scheduleItemNotification(
+        final scheduled = await _notificationService.scheduleItemNotification(
           item,
           notificationHour: _notificationHour,
           notificationMinute: _notificationMinute,
         );
+        if (!scheduled) {
+          debugPrint('TrackedItemsProvider: Failed to schedule notification for new item "${item.name}"');
+        }
       }
 
       notifyListeners();
@@ -193,11 +196,14 @@ class TrackedItemsProvider extends ChangeNotifier {
         _items[index] = updatedItem;
 
         // Update notification schedule for this item
-        _notificationService.scheduleItemNotification(
+        final scheduled = await _notificationService.scheduleItemNotification(
           updatedItem,
           notificationHour: _notificationHour,
           notificationMinute: _notificationMinute,
         );
+        if (!scheduled) {
+          debugPrint('TrackedItemsProvider: Failed to schedule notification for updated item "${updatedItem.name}"');
+        }
 
         notifyListeners();
       }
@@ -237,11 +243,14 @@ class TrackedItemsProvider extends ChangeNotifier {
         _items[index] = updatedItem;
 
         // Reschedule notification for the reset item
-        _notificationService.scheduleItemNotification(
+        final scheduled = await _notificationService.scheduleItemNotification(
           updatedItem,
           notificationHour: _notificationHour,
           notificationMinute: _notificationMinute,
         );
+        if (!scheduled) {
+          debugPrint('TrackedItemsProvider: Failed to schedule notification for reset item "${updatedItem.name}"');
+        }
 
         notifyListeners();
         return true;

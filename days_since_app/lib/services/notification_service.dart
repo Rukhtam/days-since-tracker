@@ -574,6 +574,19 @@ class NotificationService {
         return true;
       }
 
+      // Check if we can schedule exact alarms (Android 12+ requires permission)
+      // If not, fall back to inexact scheduling which is more reliable
+      final canUseExact = await canScheduleExactAlarms();
+      final scheduleMode = canUseExact 
+          ? AndroidScheduleMode.exactAllowWhileIdle 
+          : AndroidScheduleMode.inexactAllowWhileIdle;
+      
+      if (!canUseExact) {
+        debugPrint(
+          'NotificationService: Exact alarms not permitted, using inexact mode for "${item.name}"',
+        );
+      }
+
       // Create notification details
       final androidDetails = AndroidNotificationDetails(
         _channelId,
@@ -606,18 +619,18 @@ class NotificationService {
         iOS: iosDetails,
       );
 
-      // Schedule the notification
+      // Schedule the notification with appropriate mode
       await _notifications.zonedSchedule(
         _getNotificationId(item.id),
         _getNotificationTitle(item),
         _getNotificationBody(item),
         notificationDate,
         details,
-        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        androidScheduleMode: scheduleMode,
       );
 
       debugPrint(
-        'NotificationService: Scheduled notification for "${item.name}" at $notificationDate',
+        'NotificationService: Scheduled notification for "${item.name}" at $notificationDate (mode: ${canUseExact ? "exact" : "inexact"})',
       );
       return true;
     } catch (e, stackTrace) {
@@ -856,6 +869,12 @@ class NotificationService {
         return true;
       }
 
+      // Check if we can schedule exact alarms (Android 12+ requires permission)
+      final canUseExact = await canScheduleExactAlarms();
+      final scheduleMode = canUseExact 
+          ? AndroidScheduleMode.exactAllowWhileIdle 
+          : AndroidScheduleMode.inexactAllowWhileIdle;
+
       final androidDetails = AndroidNotificationDetails(
         _channelId,
         _channelName,
@@ -893,11 +912,11 @@ class NotificationService {
         '${item.name} is due tomorrow! Take action before it becomes overdue.',
         smartReminderDate,
         details,
-        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        androidScheduleMode: scheduleMode,
       );
 
       debugPrint(
-        'NotificationService: Scheduled smart reminder for "${item.name}" at $smartReminderDate',
+        'NotificationService: Scheduled smart reminder for "${item.name}" at $smartReminderDate (mode: ${canUseExact ? "exact" : "inexact"})',
       );
       return true;
     } catch (e) {
